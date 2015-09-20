@@ -11,6 +11,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.trees.Id3;
+import weka.classifiers.trees.J48;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
@@ -61,7 +64,7 @@ public class Helper {
         return newData;
     }
 
-    public static Instances resampleData(Instances data) {
+    public static Instances resample(Instances data) {
         Instances newData = null;
         
         try {
@@ -73,6 +76,32 @@ public class Helper {
         }
         
         return newData;
+    }
+    
+    public static Classifier buildClassifier(Instances data, String type) {
+        try {
+            switch (type.toLowerCase()) {
+                case "naivebayes":
+                    NaiveBayes naiveBayes = new NaiveBayes();
+                    naiveBayes.buildClassifier(data);
+                    
+                    return naiveBayes;
+                case "id3":
+                    Id3 id3 = new Id3();
+                    id3.buildClassifier(data);
+                    
+                    return id3;
+                case "j48":
+                    J48 j48 = new J48();
+                    j48.buildClassifier(data);
+                    
+                    return j48;
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Helper.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return null;
     }
     
     public static void tenFoldCrossValidation(Instances data,
