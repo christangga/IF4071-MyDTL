@@ -11,16 +11,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
+import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.trees.Id3;
+import weka.classifiers.trees.J48;
 import weka.core.Instances;
 import weka.core.converters.ConverterUtils.DataSource;
 import weka.filters.Filter;
 import weka.filters.supervised.instance.Resample;
 import weka.filters.unsupervised.attribute.Remove;
 
-/**
- *
- * @author susanti_2
- */
+
 public class Helper {
 
     /**
@@ -53,19 +53,14 @@ public class Helper {
         return data;
     }
 
-    /* 
-     * attribute - a string representing the list of attributes.
-     * Since the string will typically come from a user, attributes are indexed from 1. 
-     * eg: first-3,5,6-last
-     */
-
     /**
      *
      * @param data
-     * @param attribute
+     * @param attribute a string representing the list of attributes. 
+     * Since the string will typically come from a user, attributes are indexed from 1. 
+     * eg: first-3,5,6-last
      * @return
      */
-    
     public static Instances removeAttribute(Instances data, String attribute) {
         Instances newData = null;
 
@@ -86,7 +81,7 @@ public class Helper {
      * @param data
      * @return
      */
-    public static Instances resampleData(Instances data) {
+    public static Instances resample(Instances data) {
         Instances newData = null;
         
         try {
@@ -98,6 +93,38 @@ public class Helper {
         }
         
         return newData;
+    }
+    
+    /**
+     *
+     * @param data
+     * @param type
+     * @return 
+     */
+    public static Classifier buildClassifier(Instances data, String type) {
+        try {
+            switch (type.toLowerCase()) {
+                case "naivebayes":
+                    NaiveBayes naiveBayes = new NaiveBayes();
+                    naiveBayes.buildClassifier(data);
+                    
+                    return naiveBayes;
+                case "id3":
+                    Id3 id3 = new Id3();
+                    id3.buildClassifier(data);
+                    
+                    return id3;
+                case "j48":
+                    J48 j48 = new J48();
+                    j48.buildClassifier(data);
+                    
+                    return j48;
+            }
+        } catch (Exception ex) {
+            Logger.getLogger(Helper.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return null;
     }
     
     /**
@@ -138,6 +165,33 @@ public class Helper {
             System.out.println(eval.toMatrixString());
         } catch (Exception e) {
             // TODO Auto-generated catch block
+        }
+    }
+    
+    /**
+     *
+     * @param data
+     * @param classifier
+     * @param percentage
+     */
+    public static void percentageSplit(Instances data, Classifier classifier, int percentage)
+    {
+        Instances dataSet = new Instances(data);
+        dataSet.randomize(new Random(1));
+        
+        int trainSize = Math.round(dataSet.numInstances() * percentage / 100);
+        int testSize = dataSet.numInstances() - trainSize;
+        Instances trainSet = new Instances(dataSet, 0, trainSize);
+        Instances testSet = new Instances(dataSet, trainSize, testSize);
+
+        try {
+            classifier.buildClassifier(trainSet);
+            Evaluation eval = new Evaluation(trainSet);
+            eval.evaluateModel(classifier, testSet);
+            System.out
+                .println(eval.toSummaryString("=== Summary ===\n", false));
+            System.out.println(eval.toClassDetailsString());
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
