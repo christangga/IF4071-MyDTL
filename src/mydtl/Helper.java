@@ -90,6 +90,28 @@ public class Helper {
             e.printStackTrace();
         }
     }
+    
+    public static void percentageSplit(Instances data, Classifier classifier, int percentage)
+    {
+        Instances dataSet = new Instances(data);
+        dataSet.randomize(new Random(1));
+        
+        int trainSize = Math.round(dataSet.numInstances() * percentage / 100);
+        int testSize = dataSet.numInstances() - trainSize;
+        Instances trainSet = new Instances(dataSet, 0, trainSize);
+        Instances testSet = new Instances(dataSet, trainSize, testSize);
+
+        try {
+            classifier.buildClassifier(trainSet);
+            Evaluation eval = new Evaluation(trainSet);
+            eval.evaluateModel(classifier, testSet);
+            System.out
+                .println(eval.toSummaryString("=== Summary ===\n", false));
+            System.out.println(eval.toClassDetailsString());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     public static void saveModelToFile(Instances data,
         Classifier classifier, String file) {
