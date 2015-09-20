@@ -17,11 +17,23 @@ import weka.filters.Filter;
 import weka.filters.supervised.instance.Resample;
 import weka.filters.unsupervised.attribute.Remove;
 
+/**
+ *
+ * @author susanti_2
+ */
 public class Helper {
 
+    /**
+     *
+     */
     public Helper() {
     }
 
+    /**
+     *
+     * @param file
+     * @return
+     */
     public static Instances loadDataFromFile(String file) {
         Instances data = null;
 
@@ -46,6 +58,14 @@ public class Helper {
      * Since the string will typically come from a user, attributes are indexed from 1. 
      * eg: first-3,5,6-last
      */
+
+    /**
+     *
+     * @param data
+     * @param attribute
+     * @return
+     */
+    
     public static Instances removeAttribute(Instances data, String attribute) {
         Instances newData = null;
 
@@ -61,6 +81,11 @@ public class Helper {
         return newData;
     }
 
+    /**
+     *
+     * @param data
+     * @return
+     */
     public static Instances resampleData(Instances data) {
         Instances newData = null;
         
@@ -75,6 +100,11 @@ public class Helper {
         return newData;
     }
     
+    /**
+     *
+     * @param data
+     * @param classifier
+     */
     public static void tenFoldCrossValidation(Instances data,
         Classifier classifier) {
         try {
@@ -90,7 +120,34 @@ public class Helper {
             e.printStackTrace();
         }
     }
+    
+    /**
+     * Fungsi untuk melakukan test terhadap classifier yang telah dibuat
+     * @param data Data latih yang digunakan untuk membuat classifier
+     * @param classifier Jenis classifier yang dipakai
+     * @param datatest Data test yang akan digunakan untuk pengujian
+     */
+    public static void testSetEvaluation(Instances data, Classifier classifier, Instances datatest) {
+        try {
+            Evaluation eval = new Evaluation(data);
+            eval.evaluateModel(classifier, datatest);
+            
+            System.out
+                .println(eval.toSummaryString("=== Summary ===\n", false));
+            System.out.println(eval.toClassDetailsString());
+            System.out.println(eval.toMatrixString());
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
 
+    /**
+     *
+     * @param data
+     * @param classifier
+     * @param file
+     */
     public static void saveModelToFile(Instances data,
         Classifier classifier, String file) {
         try {
@@ -109,6 +166,11 @@ public class Helper {
         }
     }
 
+    /**
+     *
+     * @param file
+     * @return
+     */
     public static Classifier loadModelFromFile(String file) {
         Classifier cls = null;
 
@@ -132,6 +194,11 @@ public class Helper {
         return cls;
     }
 
+    /**
+     *
+     * @param data
+     * @param classifier
+     */
     public static void classifyUsingModel(Instances data,
         Classifier classifier) {
         try {
