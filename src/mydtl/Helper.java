@@ -24,14 +24,14 @@ import weka.filters.unsupervised.attribute.Remove;
 public class Helper {
 
     /**
-     *
+     * Constructor
      */
     public Helper() {
     }
 
     /**
      *
-     * @param file
+     * @param file the path to the data file
      * @return
      */
     public static Instances loadDataFromFile(String file) {
@@ -41,7 +41,7 @@ public class Helper {
             data = DataSource.read(file);
 
             // setting class attribute if the data format does not provide this information
-            // For example, the XRFF format saves the class attribute information as well
+            // For example, the ARFF format saves the class attribute information as well
             if (data.classIndex() == -1) {
                 data.setClassIndex(data.numAttributes() - 1);
             }
@@ -186,11 +186,7 @@ public class Helper {
 
         try {
             classifier.buildClassifier(trainSet);
-            Evaluation eval = new Evaluation(trainSet);
-            eval.evaluateModel(classifier, testSet);
-            System.out
-                .println(eval.toSummaryString("=== Summary ===\n", false));
-            System.out.println(eval.toClassDetailsString());
+            testSetEvaluation(trainSet, classifier, testSet);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -202,15 +198,11 @@ public class Helper {
      * @param classifier
      * @param file
      */
-    public static void saveModelToFile(Instances data,
-        Classifier classifier, String file) {
+    public static void saveModelToFile(Classifier classifier, String file) {
         try {
-            Classifier cls = classifier;
-            cls.buildClassifier(data);
-
             ObjectOutputStream oos = new ObjectOutputStream(
                 new FileOutputStream(file));
-            oos.writeObject(cls);
+            oos.writeObject(classifier);
 
             oos.flush();
             oos.close();
@@ -250,25 +242,20 @@ public class Helper {
 
     /**
      *
-     * @param data
      * @param classifier
+     * @param file
      */
-    public static void classifyUsingModel(Instances data,
-        Classifier classifier) {
+    public static void classifyUsingModel(Classifier classifier, String file) {
         try {
-            Classifier cls = classifier;
-            cls.buildClassifier(data);
-
-            Instances unlabeled = DataSource
-                .read("weather.nominal_unlabeled.arff");
+            Instances unlabeled = DataSource.read(file);
             unlabeled.setClassIndex(unlabeled.numAttributes() - 1);
 
             Instances labeled = new Instances(unlabeled);
             // label instances
             for (int i = 0; i < unlabeled.numInstances(); i++) {
-                double clsLabel = cls.classifyInstance(unlabeled.instance(i));
+                double clsLabel = classifier.classifyInstance(unlabeled.instance(i));
                 labeled.instance(i).setClassValue(clsLabel);
-                System.out.println(labeled.toString());
+                System.out.println(labeled.instance(i));
             }
         } catch (Exception e) {
             // TODO Auto-generated catch block
