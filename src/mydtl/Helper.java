@@ -30,8 +30,8 @@ public class Helper {
     }
 
     /**
-     *
-     * @param file the path to the data file
+     * Load the dataset from specified file into weka Instances
+     * @param file the file path to the dataset
      * @return
      */
     public static Instances loadDataFromFile(String file) {
@@ -54,7 +54,7 @@ public class Helper {
     }
 
     /**
-     *
+     * Remove the attributes from the dataset
      * @param data
      * @param attribute a string representing the list of attributes. 
      * Since the string will typically come from a user, attributes are indexed from 1. 
@@ -77,8 +77,8 @@ public class Helper {
     }
 
     /**
-     *
-     * @param data
+     * Randomize the instances
+     * @param data the dataset that will be randomized
      * @return
      */
     public static Instances resample(Instances data) {
@@ -96,9 +96,9 @@ public class Helper {
     }
     
     /**
-     *
-     * @param data
-     * @param type
+     * Build the classifier from dataset, allowed algorithms are naive bayes, ID3, J48
+     * @param data the dataset that will be trained
+     * @param type choice of algorithm, can be naivebayes, id3, or j48
      * @return 
      */
     public static Classifier buildClassifier(Instances data, String type) {
@@ -128,9 +128,9 @@ public class Helper {
     }
     
     /**
-     *
-     * @param data
-     * @param classifier
+     * Do a ten fold cross validation using he model and instances
+     * @param data the dataset that will be used
+     * @param classifier the classifier that will be used
      */
     public static void tenFoldCrossValidation(Instances data,
         Classifier classifier) {
@@ -149,10 +149,10 @@ public class Helper {
     }
     
     /**
-     * Fungsi untuk melakukan test terhadap classifier yang telah dibuat
-     * @param data Data latih yang digunakan untuk membuat classifier
-     * @param classifier Jenis classifier yang dipakai
-     * @param datatest Data test yang akan digunakan untuk pengujian
+     * Function to test the classifier that has been built
+     * @param data the training set that will be used
+     * @param classifier the classifier that will be used
+     * @param datatest the test set that will be used
      */
     public static void testSetEvaluation(Instances data, Classifier classifier, Instances datatest) {
         try {
@@ -169,10 +169,10 @@ public class Helper {
     }
     
     /**
-     *
-     * @param data
-     * @param classifier
-     * @param percentage
+     * Split instances into training data and test data to test the classifier
+     * @param data the dataset that will be split
+     * @param classifier the classifier that will be used
+     * @param percentage the percentage of the split, usually 80 which means 80%
      */
     public static void percentageSplit(Instances data, Classifier classifier, int percentage)
     {
@@ -193,10 +193,9 @@ public class Helper {
     }
 
     /**
-     *
-     * @param data
-     * @param classifier
-     * @param file
+     * Save a model that has been built to a file
+     * @param classifier the classifier that will be saved
+     * @param file the filename for the file
      */
     public static void saveModelToFile(Classifier classifier, String file) {
         try {
@@ -213,8 +212,8 @@ public class Helper {
     }
 
     /**
-     *
-     * @param file
+     * Load a classifier model from file
+     * @param file the file path to the model file
      * @return
      */
     public static Classifier loadModelFromFile(String file) {
@@ -241,9 +240,9 @@ public class Helper {
     }
 
     /**
-     *
-     * @param classifier
-     * @param file
+     * Classify unlabeled instances in a file using a classifier
+     * @param classifier the classifier chosen to classify the instances
+     * @param file the file path to the unlabeled instances
      */
     public static void classifyUsingModel(Classifier classifier, String file) {
         try {
