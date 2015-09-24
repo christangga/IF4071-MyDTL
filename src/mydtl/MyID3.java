@@ -104,7 +104,7 @@ public class MyID3 extends Classifier {
         }
         m_Attribute = data.attribute(Utils.maxIndex(infoGains));
 
-    // Make leaf if information gain is zero. 
+        // Make leaf if information gain is zero. 
         // Otherwise create successors.
         if (Utils.eq(infoGains[m_Attribute.index()], 0)) {
             m_Attribute = null;
@@ -200,11 +200,12 @@ public class MyID3 extends Classifier {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);
-        for (int j = 0; j < att.numValues(); j++) {
-            if (splitData[j].numInstances() > 0) {
-                infoGain -= ((double) splitData[j].numInstances()
-                        / (double) data.numInstances())
-                        * computeEntropy(splitData[j]);
+        for (Instances splitdata : splitData) {
+            if (splitdata.numInstances() > 0) {
+                double splitNumInstances = splitdata.numInstances();
+                double dataNumInstances = data.numInstances();
+                double proportion = splitNumInstances / dataNumInstances;
+                infoGain -= proportion * computeEntropy(splitdata);
             }
         }
         return infoGain;
@@ -214,25 +215,34 @@ public class MyID3 extends Classifier {
      * Computes the entropy of a dataset.
      *
      * @param data the data for which entropy is to be computed
-     * @return the entropy of the data's class distribution
+     * @return the entropy of the data class distribution
      * @throws Exception if computation fails
      */
     private double computeEntropy(Instances data) throws Exception {
 
-        double[] classCounts = new double[data.numClasses()];
-        Enumeration instEnum = data.enumerateInstances();
-        while (instEnum.hasMoreElements()) {
-            Instance inst = (Instance) instEnum.nextElement();
-            classCounts[(int) inst.classValue()]++;
+        double[] labelCounts = new double[data.numClasses()];
+        for (int i = 0; i < data.numInstances(); ++i) {
+            labelCounts[(int) data.instance(i).classValue()]++;
         }
+
         double entropy = 0;
-        for (int j = 0; j < data.numClasses(); j++) {
-            if (classCounts[j] > 0) {
-                entropy -= classCounts[j] * Utils.log2(classCounts[j]);
+        for (int i = 0; i < labelCounts.length; i++) {
+            if (labelCounts[i] > 0) {
+                double proportion = labelCounts[i] / data.numInstances();
+                entropy -= (proportion) * log2(proportion);
             }
         }
-        entropy /= (double) data.numInstances();
-        return entropy + Utils.log2(data.numInstances());
+        return entropy;
+    }
+
+    /**
+     * Count the logarithm value with base 2 of a number
+     *
+     * @param num number that will be counted
+     * @return logarithm value with base 2
+     */
+    private double log2(double num) {
+        return (num == 0) ? 0 : Math.log(num) / Math.log(2);
     }
 
     /**
