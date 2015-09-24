@@ -13,10 +13,10 @@ public class MyDTL {
         Instances instances = Helper.loadDataFromFile(DATA_SOURCE);
         
         // Remove the first attribute which is outlook
-        instances = Helper.removeAttribute(instances, "1");
+        // instances = Helper.removeAttribute(instances, "1");
         
         // Resample the dataset
-        instances = Helper.resample(instances);
+        // instances = Helper.resample(instances);
         
         // Try to build classifiers using naive bayes, id3, & j48
         Classifier classifier_naivebayes = Helper.buildClassifier(instances, "naivebayes");

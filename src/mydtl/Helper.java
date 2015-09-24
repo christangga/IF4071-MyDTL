@@ -248,8 +248,9 @@ public class Helper {
         try {
             Instances unlabeled = DataSource.read(file);
             unlabeled.setClassIndex(unlabeled.numAttributes() - 1);
-
+            
             Instances labeled = new Instances(unlabeled);
+            
             // label instances
             for (int i = 0; i < unlabeled.numInstances(); i++) {
                 double clsLabel = classifier.classifyInstance(unlabeled.instance(i));
