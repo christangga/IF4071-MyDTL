@@ -12,6 +12,8 @@ import weka.core.Utils;
 
 public class MyID3 extends Classifier {
 
+    private final double MISSING_VALUE = Double.NaN;
+
     /**
      * The node's children.
      */
@@ -61,18 +63,18 @@ public class MyID3 extends Classifier {
     }
 
     /**
-     * Builds Id3 decision tree classifier.
+     * Builds Id3 tree classifier.
      *
      * @param data the training data
-     * @exception Exception if classifier can't be built successfully
+     * @exception Exception if classifier failed to build
      */
     @Override
     public void buildClassifier(Instances data) throws Exception {
 
-        // can classifier handle the data?
+        // Mengecek apakah data dapat dibuat classifier
         getCapabilities().testWithFail(data);
 
-        // remove instances with missing class
+        // Menghapus instances dengan missing class
         data = new Instances(data);
         data.deleteWithMissingClass();
 
@@ -80,49 +82,50 @@ public class MyID3 extends Classifier {
     }
 
     /**
-     * Method for building an Id3 tree.
+     * Creates an Id3 tree.
      *
      * @param data the training data
-     * @exception Exception if decision tree can't be built successfully
+     * @exception Exception if tree failed to build
      */
     private void makeTree(Instances data) throws Exception {
 
-        // Check if no instances have reached this node.
+        // Mengecek apakah tidak terdapat instance yang dalam node ini
         if (data.numInstances() == 0) {
             m_Attribute = null;
-            m_Label = Instance.missingValue();
+            m_Label = MISSING_VALUE;
             m_ClassDistribution = new double[data.numClasses()];
-            return;
-        }
-
-        // Compute attribute with maximum information gain.
-        double[] infoGains = new double[data.numAttributes()];
-        Enumeration attEnum = data.enumerateAttributes();
-        while (attEnum.hasMoreElements()) {
-            Attribute att = (Attribute) attEnum.nextElement();
-            infoGains[att.index()] = computeInfoGain(data, att);
-        }
-        m_Attribute = data.attribute(Utils.maxIndex(infoGains));
-
-    // Make leaf if information gain is zero. 
-        // Otherwise create successors.
-        if (Utils.eq(infoGains[m_Attribute.index()], 0)) {
-            m_Attribute = null;
-            m_ClassDistribution = new double[data.numClasses()];
-            Enumeration instEnum = data.enumerateInstances();
-            while (instEnum.hasMoreElements()) {
-                Instance inst = (Instance) instEnum.nextElement();
-                m_ClassDistribution[(int) inst.classValue()]++;
-            }
-            Utils.normalize(m_ClassDistribution);
-            m_Label = Utils.maxIndex(m_ClassDistribution);
-            m_ClassAttribute = data.classAttribute();
         } else {
-            Instances[] splitData = splitData(data, m_Attribute);
-            m_Children = new MyID3[m_Attribute.numValues()];
-            for (int j = 0; j < m_Attribute.numValues(); j++) {
-                m_Children[j] = new MyID3();
-                m_Children[j].makeTree(splitData[j]);
+            // Mencari IG maksimum
+            double[] infoGains = new double[data.numAttributes()];
+            Enumeration attEnum = data.enumerateAttributes();
+            while (attEnum.hasMoreElements()) {
+                Attribute att = (Attribute) attEnum.nextElement();
+                infoGains[att.index()] = computeInfoGain(data, att);
+            }
+
+            m_Attribute = data.attribute(Utils.maxIndex(infoGains));
+
+            // Membuat daun jika IG-nya 0
+            if (Utils.eq(infoGains[m_Attribute.index()], 0)) {
+                m_Attribute = null;
+
+                m_ClassDistribution = new double[data.numClasses()];
+                for (int i = 0; i < data.numInstances(); i++) {
+                    Instance inst = (Instance) data.instance(i);
+                    m_ClassDistribution[(int) inst.classValue()]++;
+                }
+
+                Utils.normalize(m_ClassDistribution);
+                m_Label = Utils.maxIndex(m_ClassDistribution);
+                m_ClassAttribute = data.classAttribute();
+            } else {
+                // Membuat tree baru di bawah node ini
+                Instances[] splitData = splitData(data, m_Attribute);
+                m_Children = new MyID3[m_Attribute.numValues()];
+                for (int j = 0; j < m_Attribute.numValues(); j++) {
+                    m_Children[j] = new MyID3();
+                    m_Children[j].makeTree(splitData[j]);
+                }
             }
         }
     }
@@ -136,17 +139,17 @@ public class MyID3 extends Classifier {
      */
     @Override
     public double classifyInstance(Instance instance)
-            throws NoSupportForMissingValuesException {
+        throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("Id3: no missing values, "
-                    + "please.");
+                + "please.");
         }
         if (m_Attribute == null) {
             return m_Label;
         } else {
             return m_Children[(int) instance.value(m_Attribute)].
-                    classifyInstance(instance);
+                classifyInstance(instance);
         }
     }
 
@@ -159,17 +162,17 @@ public class MyID3 extends Classifier {
      */
     @Override
     public double[] distributionForInstance(Instance instance)
-            throws NoSupportForMissingValuesException {
+        throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("Id3: no missing values, "
-                    + "please.");
+                + "please.");
         }
         if (m_Attribute == null) {
             return m_ClassDistribution;
         } else {
             return m_Children[(int) instance.value(m_Attribute)].
-                    distributionForInstance(instance);
+                distributionForInstance(instance);
         }
     }
 
@@ -196,15 +199,15 @@ public class MyID3 extends Classifier {
      * @throws Exception if computation fails
      */
     private double computeInfoGain(Instances data, Attribute att)
-            throws Exception {
+        throws Exception {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);
         for (int j = 0; j < att.numValues(); j++) {
             if (splitData[j].numInstances() > 0) {
                 infoGain -= ((double) splitData[j].numInstances()
-                        / (double) data.numInstances())
-                        * computeEntropy(splitData[j]);
+                    / (double) data.numInstances())
+                    * computeEntropy(splitData[j]);
             }
         }
         return infoGain;
@@ -379,7 +382,7 @@ public class MyID3 extends Classifier {
         result.append("  private static void checkMissing(Object[] i, int index) {\n");
         result.append("    if (i[index] == null)\n");
         result.append("      throw new IllegalArgumentException(\"Null values "
-                + "are not allowed!\");\n");
+            + "are not allowed!\");\n");
         result.append("  }\n\n");
         result.append("  public static double classify(Object[] i) {\n");
         id = 0;
@@ -390,4 +393,5 @@ public class MyID3 extends Classifier {
 
         return result.toString();
     }
+
 }
