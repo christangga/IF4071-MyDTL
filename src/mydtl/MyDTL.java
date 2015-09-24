@@ -21,10 +21,13 @@ public class MyDTL {
         // Try to build classifiers using naive bayes, id3, & j48
         Classifier classifier_naivebayes = Helper.buildClassifier(instances, "naivebayes");
         Classifier classifier_id3 = Helper.buildClassifier(instances, "id3");
+        Classifier classifier_myid3 = Helper.buildClassifier(instances, "myid3");
         Classifier classifier_j48 = Helper.buildClassifier(instances, "j48");
         System.out.println(classifier_naivebayes.toString());
         System.out.println("================================================");
         System.out.println(classifier_id3.toString());
+        System.out.println("================================================");
+        System.out.println(classifier_myid3.toString());
         System.out.println("================================================");
         System.out.println(classifier_j48.toString());
         

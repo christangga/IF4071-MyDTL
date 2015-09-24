@@ -114,6 +114,11 @@ public class Helper {
                     id3.buildClassifier(data);
                     
                     return id3;
+                case "myid3":
+                    MyID3 myid3 = new MyID3();
+                    myid3.buildClassifier(data);
+                    
+                    return myid3;
                 case "j48":
                     J48 j48 = new J48();
                     j48.buildClassifier(data);
