@@ -236,11 +236,11 @@ public class MyID3 extends Classifier {
     }
 
     /**
-     * Splits a dataset according to the values of a nominal attribute.
+     * split the dataset based on attribute
      *
-     * @param data the data which is to be split
-     * @param att the attribute to be used for splitting
-     * @return the sets of instances produced by the split
+     * @param data dataset used for splitting
+     * @param att attribute used to split the dataset
+     * @return 
      */
     private Instances[] splitData(Instances data, Attribute att) {
 
@@ -248,11 +248,11 @@ public class MyID3 extends Classifier {
         for (int j = 0; j < att.numValues(); j++) {
             splitData[j] = new Instances(data, data.numInstances());
         }
-        Enumeration instEnum = data.enumerateInstances();
-        while (instEnum.hasMoreElements()) {
-            Instance inst = (Instance) instEnum.nextElement();
-            splitData[(int) inst.value(att)].add(inst);
+        
+        for (int i = 0; i < data.numInstances(); i++) {
+            splitData[(int) data.instance(i).value(att)].add(data.instance(i));
         }
+        
         for (Instances splitData1 : splitData) {
             splitData1.compactify();
         }
