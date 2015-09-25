@@ -8,11 +8,11 @@ import weka.core.Capabilities.Capability;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.NoSupportForMissingValuesException;
-import weka.core.Utils;
 
 public class MyID3 extends Classifier {
 
     private final double MISSING_VALUE = Double.NaN;
+    private final double DOUBLE_COMPARE_VALUE = 1e-6;
 
     /**
      * The node's children.
@@ -97,16 +97,17 @@ public class MyID3 extends Classifier {
         } else {
             // Mencari IG maksimum
             double[] infoGains = new double[data.numAttributes()];
+            
             Enumeration attEnum = data.enumerateAttributes();
             while (attEnum.hasMoreElements()) {
                 Attribute att = (Attribute) attEnum.nextElement();
                 infoGains[att.index()] = computeInfoGain(data, att);
             }
-
-            m_Attribute = data.attribute(Utils.maxIndex(infoGains));
+                
+            m_Attribute = data.attribute(maxIndex(infoGains));
             
             // Membuat daun jika IG-nya 0
-            if (Utils.eq(infoGains[m_Attribute.index()], 0)) {
+            if (doubleEqual(infoGains[m_Attribute.index()], 0)) {
                 m_Attribute = null;
 
                 m_ClassDistribution = new double[data.numClasses()];
@@ -115,8 +116,8 @@ public class MyID3 extends Classifier {
                     m_ClassDistribution[(int) inst.classValue()]++;
                 }
 
-                Utils.normalize(m_ClassDistribution);
-                m_Label = Utils.maxIndex(m_ClassDistribution);
+                normalizeDouble(m_ClassDistribution);
+                m_Label = maxIndex(m_ClassDistribution);
                 m_ClassAttribute = data.classAttribute();
             } else {
                 // Membuat tree baru di bawah node ini
@@ -129,7 +130,61 @@ public class MyID3 extends Classifier {
             }
         }
     }
-
+    
+    /**
+     * Normalize the values in array of double
+     *
+     * @param array the array of double
+     */
+    private void normalizeDouble(double[] array) {
+        double sum = 0;
+        for(double d : array) {
+            sum += d;
+        }
+        
+        if(!Double.isNaN(sum) && sum != 0) {
+            for (int i = 0; i < array.length; ++i) {
+                array[i] /= sum;
+            }
+        } else {
+            // Do nothing
+        }
+    }
+    
+    /**
+     * Check whether two double values are the same
+     *
+     * @param d1 the first double value
+     * @param d2 the second double value
+     * @return true if the values are the same, false if not
+     */
+    private boolean doubleEqual(double d1, double d2) {
+        return (d1 == d2) || Math.abs(d1 - d2) < DOUBLE_COMPARE_VALUE;
+    }
+    
+    /**
+     * Search for index with largest value from array of double
+     *
+     * @param array the array of double
+     * @return index of array with maximum value
+     */
+    private int maxIndex(double[] array) {
+        double max = 0;
+        int index = 0;
+        
+        if(array.length > 0) {
+            for (int i = 0; i < array.length; ++i) {
+                if(array[i] > max) {
+                    max = array[i];
+                    index = i;
+                }
+            }
+            return index;
+        } else {
+            return -1;
+        }
+    }
+    
     /**
      * Classifies a given test instance using the decision tree.
      *
@@ -142,8 +197,7 @@ public class MyID3 extends Classifier {
         throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("Id3: no missing values, "
-                + "please.");
+            throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
         }
         if (m_Attribute == null) {
             return m_Label;
@@ -165,8 +219,7 @@ public class MyID3 extends Classifier {
         throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("Id3: no missing values, "
-                + "please.");
+            throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
         }
         if (m_Attribute == null) {
             return m_ClassDistribution;
@@ -185,9 +238,9 @@ public class MyID3 extends Classifier {
     public String toString() {
 
         if ((m_ClassDistribution == null) && (m_Children == null)) {
-            return "Id3: No model built yet.";
+            return "MyID3: No model built yet.";
         }
-        return "Id3\n\n" + toString(0);
+        return "MyID3\n\n" + toString(0);
     }
 
     /**
