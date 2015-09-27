@@ -11,7 +11,7 @@ public class MyDTL {
         
         // Load file from data source
         Instances instances = Helper.loadDataFromFile(DATA_SOURCE);
-        
+
         Classifier classifier_myid3 = Helper.buildClassifier(instances, "myid3");
         System.out.println(classifier_myid3.toString());
       
