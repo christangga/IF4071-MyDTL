@@ -4,7 +4,7 @@ import weka.classifiers.Classifier;
 import weka.core.Instances;
 
 public class MyDTL {
-    private static final String DATA_SOURCE = "cpu.arff";
+    private static final String DATA_SOURCE = "weather.nominal.arff";
     private static final String DATA_SOURCE_UNLABELED = "weather.nominal.unlabeled.arff";
     
     public static void main(String[] args) {
