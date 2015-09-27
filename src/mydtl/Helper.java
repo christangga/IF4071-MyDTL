@@ -124,6 +124,11 @@ public class Helper {
                     j48.buildClassifier(data);
                     
                     return j48;
+                case "myj48":
+                    MyJ48 myj48 = new MyJ48();
+                    myj48.buildClassifier(data);
+                    
+                    return myj48;
             }
         } catch (Exception ex) {
             Logger.getLogger(Helper.class.getName()).log(Level.SEVERE, null, ex);

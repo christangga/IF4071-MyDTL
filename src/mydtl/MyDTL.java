@@ -23,6 +23,7 @@ public class MyDTL {
         Classifier classifier_id3 = Helper.buildClassifier(instances, "id3");
         Classifier classifier_myid3 = Helper.buildClassifier(instances, "myid3");
         Classifier classifier_j48 = Helper.buildClassifier(instances, "j48");
+        Classifier classifier_myj48 = Helper.buildClassifier(instances, "myj48");
         System.out.println(classifier_naivebayes.toString());
         System.out.println("================================================");
         System.out.println(classifier_id3.toString());
@@ -30,6 +31,8 @@ public class MyDTL {
         System.out.println(classifier_myid3.toString());
         System.out.println("================================================");
         System.out.println(classifier_j48.toString());
+        System.out.println("================================================");
+        System.out.println(classifier_myj48.toString());
         
         // Do ten fold cross validation using the 3 classifiers
         System.out.println("*********************************************************************");
