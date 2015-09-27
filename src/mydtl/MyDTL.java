@@ -5,7 +5,7 @@ import weka.core.Instances;
 
 public class MyDTL {
     private static final String DATA_SOURCE = "activity.arff";
-    private static final String DATA_SOURCE_UNLABELED = "weather.nominal.unlabeled.arff";
+    private static final String DATA_SOURCE_UNLABELED = "activity.unlabeled.arff";
     
     public static void main(String[] args) {
         
@@ -16,7 +16,7 @@ public class MyDTL {
         System.out.println(classifier_myid3.toString());
       
         System.out.println("============================================");
-        // Helper.classifyUsingModel(classifier_myid3, DATA_SOURCE_UNLABELED);
+        Helper.classifyUsingModel(classifier_myid3, DATA_SOURCE_UNLABELED);
         System.out.println("============================================");
     }
 }

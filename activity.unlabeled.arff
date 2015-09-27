@@ -1,0 +1,9 @@
+@relation activity
+
+@attribute deadline {urgent, dekat, tidak_ada}
+@attribute hangout {ya, tidak}
+@attribute malas {ya, tidak}
+@attribute aktivitas {kumpul-kumpul, belajar, jalan-jalan_ke_mall, nonton_tv}
+
+@data
+urgent,ya,ya,?

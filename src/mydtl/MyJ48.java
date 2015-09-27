@@ -140,43 +140,41 @@ public class MyJ48 extends Classifier {
         }
     }
 
+    /**
+     * Convert Instances with numeric attributes to nominal attributes
+     *
+     * @param data the data to be converted
+     * @return Instances with nominal attributes
+     */
     private Instances toNominalInstances(Instances data) {
-        Instances finalData = getSortedNumericValues(data);
-
-        return finalData;
-    }
-
-    private static Instances getSortedNumericValues(Instances data) {
-
         for (int ix = 0; ix < data.numAttributes(); ++ix) {
-
             Attribute att = data.attribute(ix);
-
             if (data.attribute(ix).isNumeric()) {
-                // Get an array of integer that consists of distinct values of the attribute		
+                
+                // Get an array of integer that consists of distinct values of the attribute
                 HashSet<Integer> numericSet = new HashSet<>();
                 for (int i = 0; i < data.numInstances(); ++i) {
                     numericSet.add((int) (data.instance(i).value(att)));
                 }
+
                 Integer[] numericValues = new Integer[numericSet.size()];
                 int iterator = 0;
                 for (Integer i : numericSet) {
                     numericValues[iterator] = i;
                     iterator++;
                 }
-                // Sort the array		
+
+                // Sort the array
                 sortArray(numericValues);
-                // Search for threshold and get new Instances		
-                int threshold = 0;
+
+                // Search for threshold and get new Instances
                 double[] infoGains = new double[numericValues.length - 1];
                 Instances[] tempInstances = new Instances[numericValues.length - 1];
                 for (int i = 0; i < numericValues.length - 1; ++i) {
                     tempInstances[i] = convertInstances(data, att, numericValues[i]);
                     try {
                         infoGains[i] = computeInfoGain(tempInstances[i], tempInstances[i].attribute(att.name()));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    } catch (Exception e) { }
                 }
 
                 data = new Instances(tempInstances[maxIndex(infoGains)]);
@@ -185,6 +183,14 @@ public class MyJ48 extends Classifier {
         return data;
     }
 
+    /**
+     * Convert all instances attribute type and values into nominal
+     *
+     * @param data the data to be converted
+     * @param att attribute to be changed to nominal
+     * @param threshold the threshold for attribute value
+     * @return Instances with all converted values
+     */
     private static Instances convertInstances(Instances data, Attribute att, int threshold) {
         Instances newData = new Instances(data);
 
@@ -214,6 +220,11 @@ public class MyJ48 extends Classifier {
         return finalData;
     }
 
+    /**
+     * Sort an array of integer using bubble sort algorithm
+     *
+     * @param arr the array to be sorted
+     */
     private static void sortArray(Integer[] arr) {
         int temp;
         for (int i = 0; i < arr.length - 1; i++) {
@@ -293,16 +304,54 @@ public class MyJ48 extends Classifier {
         throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("MyJ48: Cannot handle missing values");
+            throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
         }
         if (m_Attribute == null) {
             return m_Label;
         } else {
+            boolean isComparison = false;
+            Enumeration enumeration = m_Attribute.enumerateValues();
+            String val = null;
+            while (enumeration.hasMoreElements()) {
+                val = (String) enumeration.nextElement();
+                if(val.contains("<")) {
+                    isComparison = true;
+                    break;
+                }
+            }
+            
+            if(isComparison) {
+                int threshold = getThreshold(val);
+                int instanceValue = (int) instance.value(m_Attribute);
+                
+                if(instanceValue <= threshold) {
+                    instance.setValue(m_Attribute, "<=" + threshold);
+                } else {
+                    instance.setValue(m_Attribute, ">" + threshold);
+                }
+            }
             return m_Children[(int) instance.value(m_Attribute)].
-                classifyInstance(instance);
+                    classifyInstance(instance);
         }
     }
 
+    /**
+     * Parse a string of value to get its threshold
+     * e.g. "<=24" means the threshold is 24
+     *
+     * @param val the string to be parsed
+     * @return the threshold parsed from the string
+     */
+    private int getThreshold(String val) {
+        int threshold = 0;
+        
+        for(int i = 2; i < val.length(); ++i) {
+            threshold = (10 * threshold) + Character.getNumericValue(val.charAt(i));
+        }
+        
+        return threshold;
+    }
+    
     /**
      * Computes class distribution for instance using decision tree.
      *
