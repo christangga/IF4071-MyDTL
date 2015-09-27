@@ -102,17 +102,17 @@ public class MyID3 extends Classifier {
         } else {
             // Mencari IG maksimum
             double[] infoGains = new double[data.numAttributes()];
-            
+
             data = toNominalInstances(data);
-            
+
             Enumeration attEnum = data.enumerateAttributes();
             while (attEnum.hasMoreElements()) {
                 Attribute att = (Attribute) attEnum.nextElement();
                 infoGains[att.index()] = computeInfoGain(data, att);
             }
-                
+
             m_Attribute = data.attribute(maxIndex(infoGains));
-            
+
             // Membuat daun jika IG-nya 0
             if (doubleEqual(infoGains[m_Attribute.index()], 0)) {
                 m_Attribute = null;
@@ -137,29 +137,21 @@ public class MyID3 extends Classifier {
             }
         }
     }
-    
+
     private Instances toNominalInstances(Instances data) {
-        Instances finalData = getSortedNumericValues(data);
-        
-        return finalData;
-    }
-    
-    private static Instances getSortedNumericValues(Instances data) {
-        
-        for(int ix = 0; ix < data.numAttributes(); ++ix) {
-            
+        for (int ix = 0; ix < data.numAttributes(); ++ix) {
             Attribute att = data.attribute(ix);
-            
-            if(data.attribute(ix).isNumeric()) {
+            if (data.attribute(ix).isNumeric()) {
+                
                 // Get an array of integer that consists of distinct values of the attribute
                 HashSet<Integer> numericSet = new HashSet<>();
-                for(int i = 0; i < data.numInstances(); ++i) {
+                for (int i = 0; i < data.numInstances(); ++i) {
                     numericSet.add((int) (data.instance(i).value(att)));
                 }
 
                 Integer[] numericValues = new Integer[numericSet.size()];
                 int iterator = 0;
-                for(Integer i : numericSet) {
+                for (Integer i : numericSet) {
                     numericValues[iterator] = i;
                     iterator++;
                 }
@@ -168,66 +160,65 @@ public class MyID3 extends Classifier {
                 sortArray(numericValues);
 
                 // Search for threshold and get new Instances
-                int threshold = 0;
-                double[] infoGains = new double[numericValues.length-1];
-                Instances[] tempInstances = new Instances[numericValues.length-1];
-                for(int i = 0; i < numericValues.length - 1; ++i) {
+                double[] infoGains = new double[numericValues.length - 1];
+                Instances[] tempInstances = new Instances[numericValues.length - 1];
+                for (int i = 0; i < numericValues.length - 1; ++i) {
                     tempInstances[i] = convertInstances(data, att, numericValues[i]);
                     try {
                         infoGains[i] = computeInfoGain(tempInstances[i], tempInstances[i].attribute(att.name()));
-                    } catch(Exception e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                     }
                 }
-        
+
                 data = new Instances(tempInstances[maxIndex(infoGains)]);
             }
         }
         return data;
     }
-    
+
     private static Instances convertInstances(Instances data, Attribute att, int threshold) {
         Instances newData = new Instances(data);
-        
+
         // Add attribute
         try {
             Add filter = new Add();
-            filter.setAttributeIndex((att.index()+2)+"");
-            filter.setNominalLabels("<="+threshold+",>"+threshold);
-            filter.setAttributeName(att.name()+"temp");
+            filter.setAttributeIndex((att.index() + 2) + "");
+            filter.setNominalLabels("<=" + threshold + ",>" + threshold);
+            filter.setAttributeName(att.name() + "temp");
             filter.setInputFormat(newData);
             newData = Filter.useFilter(newData, filter);
-        } catch(Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
-        
-        for(int i = 0; i < newData.numInstances(); ++i) {
-            if((int) newData.instance(i).value(newData.attribute(att.name())) <= threshold) {
+
+        for (int i = 0; i < newData.numInstances(); ++i) {
+            if ((int) newData.instance(i).value(newData.attribute(att.name())) <= threshold) {
                 newData.instance(i).setValue(newData.attribute(att.name() + "temp"), "<=" + threshold);
             } else {
                 newData.instance(i).setValue(newData.attribute(att.name() + "temp"), ">" + threshold);
             }
         }
-        
-        Instances finalData = Helper.removeAttribute(newData, (att.index()+1)+"");
-        finalData.renameAttribute(finalData.attribute(att.name()+"temp"), att.name());
-        
+
+        Instances finalData = Helper.removeAttribute(newData, (att.index() + 1) + "");
+        finalData.renameAttribute(finalData.attribute(att.name() + "temp"), att.name());
+
         return finalData;
-    } 
-    
+    }
+
     private static void sortArray(Integer[] arr) {
         int temp;
-        for(int i=0; i < arr.length-1; i++){
-            for(int j=1; j < arr.length-i; j++){
-                if(arr[j-1] > arr[j]){
-                    temp=arr[j-1];
-                    arr[j-1] = arr[j];
+        for (int i = 0; i < arr.length - 1; i++) {
+            for (int j = 1; j < arr.length - i; j++) {
+                if (arr[j - 1] > arr[j]) {
+                    temp = arr[j - 1];
+                    arr[j - 1] = arr[j];
                     arr[j] = temp;
                 }
             }
         }
     }
-    
+
     /**
      * Normalize the values in array of double
      *
@@ -235,11 +226,11 @@ public class MyID3 extends Classifier {
      */
     private void normalizeDouble(double[] array) {
         double sum = 0;
-        for(double d : array) {
+        for (double d : array) {
             sum += d;
         }
-        
-        if(!Double.isNaN(sum) && sum != 0) {
+
+        if (!Double.isNaN(sum) && sum != 0) {
             for (int i = 0; i < array.length; ++i) {
                 array[i] /= sum;
             }
@@ -247,7 +238,7 @@ public class MyID3 extends Classifier {
             // Do nothing
         }
     }
-    
+
     /**
      * Check whether two double values are the same
      *
@@ -258,7 +249,7 @@ public class MyID3 extends Classifier {
     private boolean doubleEqual(double d1, double d2) {
         return (d1 == d2) || Math.abs(d1 - d2) < DOUBLE_COMPARE_VALUE;
     }
-    
+
     /**
      * Search for index with largest value from array of double
      *
@@ -268,10 +259,10 @@ public class MyID3 extends Classifier {
     private static int maxIndex(double[] array) {
         double max = 0;
         int index = 0;
-        
-        if(array.length > 0) {
+
+        if (array.length > 0) {
             for (int i = 0; i < array.length; ++i) {
-                if(array[i] > max) {
+                if (array[i] > max) {
                     max = array[i];
                     index = i;
                 }
@@ -281,7 +272,7 @@ public class MyID3 extends Classifier {
             return -1;
         }
     }
-    
+
     /**
      * Classifies a given test instance using the decision tree.
      *
@@ -291,7 +282,7 @@ public class MyID3 extends Classifier {
      */
     @Override
     public double classifyInstance(Instance instance)
-        throws NoSupportForMissingValuesException {
+            throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
@@ -299,11 +290,42 @@ public class MyID3 extends Classifier {
         if (m_Attribute == null) {
             return m_Label;
         } else {
+            boolean isComparison = false;
+            Enumeration enumeration = m_Attribute.enumerateValues();
+            String val = null;
+            while (enumeration.hasMoreElements()) {
+                val = (String) enumeration.nextElement();
+                if(val.contains("<")) {
+                    isComparison = true;
+                    break;
+                }
+            }
+            
+            if(isComparison) {
+                int threshold = getThreshold(val);
+                int instanceValue = (int) instance.value(m_Attribute);
+                
+                if(instanceValue <= threshold) {
+                    instance.setValue(m_Attribute, "<=" + threshold);
+                } else {
+                    instance.setValue(m_Attribute, ">" + threshold);
+                }
+            }
             return m_Children[(int) instance.value(m_Attribute)].
-                classifyInstance(instance);
+                    classifyInstance(instance);
         }
     }
 
+    private int getThreshold(String val) {
+        int threshold = 0;
+        
+        for(int i = 2; i < val.length(); ++i) {
+            threshold = (10 * threshold) + Character.getNumericValue(val.charAt(i));
+        }
+        
+        return threshold;
+    }
+    
     /**
      * Computes class distribution for instance using decision tree.
      *
@@ -313,7 +335,7 @@ public class MyID3 extends Classifier {
      */
     @Override
     public double[] distributionForInstance(Instance instance)
-        throws NoSupportForMissingValuesException {
+            throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
@@ -322,7 +344,7 @@ public class MyID3 extends Classifier {
             return m_ClassDistribution;
         } else {
             return m_Children[(int) instance.value(m_Attribute)].
-                distributionForInstance(instance);
+                    distributionForInstance(instance);
         }
     }
 
@@ -349,7 +371,7 @@ public class MyID3 extends Classifier {
      * @throws Exception if computation fails
      */
     private static double computeInfoGain(Instances data, Attribute att)
-        throws Exception {
+            throws Exception {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);
@@ -403,7 +425,7 @@ public class MyID3 extends Classifier {
      *
      * @param data dataset used for splitting
      * @param att attribute used to split the dataset
-     * @return 
+     * @return
      */
     private static Instances[] splitData(Instances data, Attribute att) {
 
@@ -411,11 +433,11 @@ public class MyID3 extends Classifier {
         for (int j = 0; j < att.numValues(); j++) {
             splitData[j] = new Instances(data, data.numInstances());
         }
-        
+
         for (int i = 0; i < data.numInstances(); i++) {
             splitData[(int) data.instance(i).value(att)].add(data.instance(i));
         }
-        
+
         for (Instances splitData1 : splitData) {
             splitData1.compactify();
         }
@@ -542,7 +564,7 @@ public class MyID3 extends Classifier {
         result.append("  private static void checkMissing(Object[] i, int index) {\n");
         result.append("    if (i[index] == null)\n");
         result.append("      throw new IllegalArgumentException(\"Null values "
-            + "are not allowed!\");\n");
+                + "are not allowed!\");\n");
         result.append("  }\n\n");
         result.append("  public static double classify(Object[] i) {\n");
         id = 0;

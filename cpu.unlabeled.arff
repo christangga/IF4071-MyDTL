@@ -1,0 +1,12 @@
+@relation 'cpu'
+@attribute MYCT numeric
+@attribute MMIN numeric
+@attribute MMAX numeric
+@attribute CACH numeric
+@attribute CHMIN numeric
+@attribute CHMAX numeric
+@attribute class numeric
+@attribute hasil {yes, no, maybe}
+@data
+125,256,6000,256,16,128,198,?
+26,8000,32000,64,8,32,318,?
