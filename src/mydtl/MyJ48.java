@@ -352,9 +352,8 @@ public class MyJ48 extends Classifier {
 
         double infoGain = computeInfoGain(data, att);
         double splitInfo = computeSplitInformation(data, att);
-        double gainRatio = infoGain / splitInfo;
         
-        return gainRatio;
+        return infoGain > 0 ? infoGain / splitInfo : infoGain;
     }
 
     /**
