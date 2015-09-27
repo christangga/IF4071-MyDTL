@@ -57,7 +57,7 @@ public class MyJ48 extends Classifier {
 
         // attributes
         result.enable(Capabilities.Capability.NOMINAL_ATTRIBUTES);
-        // result.enable(Capabilities.Capability.NUMERIC_ATTRIBUTES);
+        result.enable(Capabilities.Capability.NUMERIC_ATTRIBUTES);
 
         // class
         result.enable(Capabilities.Capability.NOMINAL_CLASS);
@@ -70,7 +70,7 @@ public class MyJ48 extends Classifier {
     }
 
     /**
-     * Builds Id3 tree classifier.
+     * Builds j48 tree classifier.
      *
      * @param data the training data
      * @exception Exception if classifier failed to build
@@ -89,7 +89,7 @@ public class MyJ48 extends Classifier {
     }
 
     /**
-     * Creates an Id3 tree.
+     * Creates an j48 tree.
      *
      * @param data the training data
      * @exception Exception if tree failed to build
@@ -105,7 +105,7 @@ public class MyJ48 extends Classifier {
             // Mencari IG maksimum
             double[] gainRatios = new double[data.numAttributes()];
 
-            // data = toNominalInstances(data);
+            data = toNominalInstances(data);
 
             Enumeration attEnum = data.enumerateAttributes();
             while (attEnum.hasMoreElements()) {
@@ -304,7 +304,7 @@ public class MyJ48 extends Classifier {
         throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
+            throw new NoSupportForMissingValuesException("MyJ48: Cannot handle missing values");
         }
         if (m_Attribute == null) {
             return m_Label;
