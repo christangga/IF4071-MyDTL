@@ -1,6 +1,5 @@
 package mydtl;
 
-import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.HashSet;
 import weka.classifiers.Classifier;
@@ -138,6 +137,12 @@ public class MyID3 extends Classifier {
         }
     }
 
+    /**
+     * Convert Instances with numeric attributes to nominal attributes
+     *
+     * @param data the data to be converted
+     * @return Instances with nominal attributes
+     */
     private Instances toNominalInstances(Instances data) {
         for (int ix = 0; ix < data.numAttributes(); ++ix) {
             Attribute att = data.attribute(ix);
@@ -166,9 +171,7 @@ public class MyID3 extends Classifier {
                     tempInstances[i] = convertInstances(data, att, numericValues[i]);
                     try {
                         infoGains[i] = computeInfoGain(tempInstances[i], tempInstances[i].attribute(att.name()));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
+                    } catch (Exception e) { }
                 }
 
                 data = new Instances(tempInstances[maxIndex(infoGains)]);
@@ -177,6 +180,14 @@ public class MyID3 extends Classifier {
         return data;
     }
 
+    /**
+     * Convert all instances attribute type and values into nominal
+     *
+     * @param data the data to be converted
+     * @param att attribute to be changed to nominal
+     * @param threshold the threshold for attribute value
+     * @return Instances with all converted values
+     */
     private static Instances convertInstances(Instances data, Attribute att, int threshold) {
         Instances newData = new Instances(data);
 
@@ -188,9 +199,7 @@ public class MyID3 extends Classifier {
             filter.setAttributeName(att.name() + "temp");
             filter.setInputFormat(newData);
             newData = Filter.useFilter(newData, filter);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { }
 
         for (int i = 0; i < newData.numInstances(); ++i) {
             if ((int) newData.instance(i).value(newData.attribute(att.name())) <= threshold) {
@@ -206,6 +215,11 @@ public class MyID3 extends Classifier {
         return finalData;
     }
 
+    /**
+     * Sort an array of integer using bubble sort algorithm
+     *
+     * @param arr the array to be sorted
+     */
     private static void sortArray(Integer[] arr) {
         int temp;
         for (int i = 0; i < arr.length - 1; i++) {
@@ -316,6 +330,13 @@ public class MyID3 extends Classifier {
         }
     }
 
+    /**
+     * Parse a string of value to get its threshold
+     * e.g. "<=24" means the threshold is 24
+     *
+     * @param val the string to be parsed
+     * @return the threshold parsed from the string
+     */
     private int getThreshold(String val) {
         int threshold = 0;
         
@@ -472,108 +493,4 @@ public class MyID3 extends Classifier {
         }
         return text.toString();
     }
-
-    /**
-     * Adds this tree recursively to the buffer.
-     *
-     * @param id the unique id for the method
-     * @param buffer the buffer to add the source code to
-     * @return the last ID being used
-     * @throws Exception if something goes wrong
-     */
-    protected int toSource(int id, StringBuffer buffer) throws Exception {
-        int result;
-        int i;
-        int newID;
-        StringBuffer[] subBuffers;
-
-        buffer.append("\n");
-        buffer.append("  protected static double node").append(id).append("(Object[] i) {\n");
-
-        // leaf?
-        if (m_Attribute == null) {
-            result = id;
-            if (Double.isNaN(m_Label)) {
-                buffer.append("    return Double.NaN;");
-            } else {
-                buffer.append("    return ").append(m_Label).append(";");
-            }
-            if (m_ClassAttribute != null) {
-                buffer.append(" // ").append(m_ClassAttribute.value((int) m_Label));
-            }
-            buffer.append("\n");
-            buffer.append("  }\n");
-        } else {
-            buffer.append("    checkMissing(i, ").append(m_Attribute.index()).append(");\n\n");
-            buffer.append("    // ").append(m_Attribute.name()).append("\n");
-
-            // subtree calls
-            subBuffers = new StringBuffer[m_Attribute.numValues()];
-            newID = id;
-            for (i = 0; i < m_Attribute.numValues(); i++) {
-                newID++;
-
-                buffer.append("    ");
-                if (i > 0) {
-                    buffer.append("else ");
-                }
-                buffer.append("if (((String) i[").append(m_Attribute.index()).append("]).equals(\"").append(m_Attribute.value(i)).append("\"))\n");
-                buffer.append("      return node").append(newID).append("(i);\n");
-
-                subBuffers[i] = new StringBuffer();
-                newID = m_Children[i].toSource(newID, subBuffers[i]);
-            }
-            buffer.append("    else\n");
-            buffer.append("      throw new IllegalArgumentException(\"Value '\" + i[").append(m_Attribute.index()).append("] + \"' is not allowed!\");\n");
-            buffer.append("  }\n");
-
-            // output subtree code
-            for (i = 0; i < m_Attribute.numValues(); i++) {
-                buffer.append(subBuffers[i].toString());
-            }
-            subBuffers = null;
-
-            result = newID;
-        }
-
-        return result;
-    }
-
-    /**
-     * Returns a string that describes the classifier as source. The classifier
-     * will be contained in a class with the given name (there may be auxiliary
-     * classes), and will contain a method with the signature:
-     * <pre><code>
-     * public static double classify(Object[] i);
-     * </code></pre> where the array <code>i</code> contains elements that are
-     * either Double, String, with missing values represented as null. The
-     * generated code is public domain and comes with no warranty. <br/>
-     * Note: works only if class attribute is the last attribute in the dataset.
-     *
-     * @param className the name that should be given to the source class.
-     * @return the object source described by a string
-     * @throws Exception if the source can't be computed
-     */
-    public String toSource(String className) throws Exception {
-        StringBuffer result;
-        int id;
-
-        result = new StringBuffer();
-
-        result.append("class ").append(className).append(" {\n");
-        result.append("  private static void checkMissing(Object[] i, int index) {\n");
-        result.append("    if (i[index] == null)\n");
-        result.append("      throw new IllegalArgumentException(\"Null values "
-                + "are not allowed!\");\n");
-        result.append("  }\n\n");
-        result.append("  public static double classify(Object[] i) {\n");
-        id = 0;
-        result.append("    return node").append(id).append("(i);\n");
-        result.append("  }\n");
-        toSource(id, result);
-        result.append("}\n");
-
-        return result.toString();
-    }
-
 }
