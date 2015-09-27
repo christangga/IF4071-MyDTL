@@ -147,7 +147,7 @@ public class MyID3 extends Classifier {
         for (int ix = 0; ix < data.numAttributes(); ++ix) {
             Attribute att = data.attribute(ix);
             if (data.attribute(ix).isNumeric()) {
-                
+
                 // Get an array of integer that consists of distinct values of the attribute
                 HashSet<Integer> numericSet = new HashSet<>();
                 for (int i = 0; i < data.numInstances(); ++i) {
@@ -171,7 +171,8 @@ public class MyID3 extends Classifier {
                     tempInstances[i] = convertInstances(data, att, numericValues[i]);
                     try {
                         infoGains[i] = computeInfoGain(tempInstances[i], tempInstances[i].attribute(att.name()));
-                    } catch (Exception e) { }
+                    } catch (Exception e) {
+                    }
                 }
 
                 data = new Instances(tempInstances[maxIndex(infoGains)]);
@@ -199,7 +200,8 @@ public class MyID3 extends Classifier {
             filter.setAttributeName(att.name() + "temp");
             filter.setInputFormat(newData);
             newData = Filter.useFilter(newData, filter);
-        } catch (Exception e) { }
+        } catch (Exception e) {
+        }
 
         for (int i = 0; i < newData.numInstances(); ++i) {
             if ((int) newData.instance(i).value(newData.attribute(att.name())) <= threshold) {
@@ -296,7 +298,7 @@ public class MyID3 extends Classifier {
      */
     @Override
     public double classifyInstance(Instance instance)
-            throws NoSupportForMissingValuesException {
+        throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
@@ -309,44 +311,44 @@ public class MyID3 extends Classifier {
             String val = null;
             while (enumeration.hasMoreElements()) {
                 val = (String) enumeration.nextElement();
-                if(val.contains("<")) {
+                if (val.contains("<")) {
                     isComparison = true;
                     break;
                 }
             }
-            
-            if(isComparison) {
+
+            if (isComparison) {
                 int threshold = getThreshold(val);
                 int instanceValue = (int) instance.value(m_Attribute);
-                
-                if(instanceValue <= threshold) {
+
+                if (instanceValue <= threshold) {
                     instance.setValue(m_Attribute, "<=" + threshold);
                 } else {
                     instance.setValue(m_Attribute, ">" + threshold);
                 }
             }
             return m_Children[(int) instance.value(m_Attribute)].
-                    classifyInstance(instance);
+                classifyInstance(instance);
         }
     }
 
     /**
-     * Parse a string of value to get its threshold
-     * e.g. "<=24" means the threshold is 24
+     * Parse a string of value to get its threshold e.g. "<=24" means the
+     * threshold is 24
      *
      * @param val the string to be parsed
      * @return the threshold parsed from the string
      */
     private int getThreshold(String val) {
         int threshold = 0;
-        
-        for(int i = 2; i < val.length(); ++i) {
+
+        for (int i = 2; i < val.length(); ++i) {
             threshold = (10 * threshold) + Character.getNumericValue(val.charAt(i));
         }
-        
+
         return threshold;
     }
-    
+
     /**
      * Computes class distribution for instance using decision tree.
      *
@@ -356,7 +358,7 @@ public class MyID3 extends Classifier {
      */
     @Override
     public double[] distributionForInstance(Instance instance)
-            throws NoSupportForMissingValuesException {
+        throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("MyID3: Cannot handle missing values");
@@ -365,7 +367,7 @@ public class MyID3 extends Classifier {
             return m_ClassDistribution;
         } else {
             return m_Children[(int) instance.value(m_Attribute)].
-                    distributionForInstance(instance);
+                distributionForInstance(instance);
         }
     }
 
@@ -392,7 +394,7 @@ public class MyID3 extends Classifier {
      * @throws Exception if computation fails
      */
     private static double computeInfoGain(Instances data, Attribute att)
-            throws Exception {
+        throws Exception {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);

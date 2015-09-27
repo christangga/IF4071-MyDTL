@@ -20,7 +20,6 @@ import weka.filters.Filter;
 import weka.filters.supervised.instance.Resample;
 import weka.filters.unsupervised.attribute.Remove;
 
-
 public class Helper {
 
     /**
@@ -31,6 +30,7 @@ public class Helper {
 
     /**
      * Load the dataset from specified file into weka Instances
+     *
      * @param file the file path to the dataset
      * @return
      */
@@ -55,9 +55,10 @@ public class Helper {
 
     /**
      * Remove the attributes from the dataset
+     *
      * @param data
-     * @param attribute a string representing the list of attributes. 
-     * Since the string will typically come from a user, attributes are indexed from 1. 
+     * @param attribute a string representing the list of attributes. Since the
+     * string will typically come from a user, attributes are indexed from 1.
      * eg: first-3,5,6-last
      * @return
      */
@@ -78,12 +79,13 @@ public class Helper {
 
     /**
      * Randomize the instances
+     *
      * @param data the dataset that will be randomized
      * @return
      */
     public static Instances resample(Instances data) {
         Instances newData = null;
-        
+
         try {
             Resample resample = new Resample();
             resample.setInputFormat(data);
@@ -91,15 +93,17 @@ public class Helper {
         } catch (Exception ex) {
             Logger.getLogger(Helper.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         return newData;
     }
-    
+
     /**
-     * Build the classifier from dataset, allowed algorithms are naive bayes, ID3, J48
+     * Build the classifier from dataset, allowed algorithms are naive bayes,
+     * ID3, J48
+     *
      * @param data the dataset that will be trained
      * @param type choice of algorithm, can be naivebayes, id3, or j48
-     * @return 
+     * @return
      */
     public static Classifier buildClassifier(Instances data, String type) {
         try {
@@ -107,38 +111,40 @@ public class Helper {
                 case "naivebayes":
                     NaiveBayes naiveBayes = new NaiveBayes();
                     naiveBayes.buildClassifier(data);
-                    
+
                     return naiveBayes;
                 case "id3":
                     Id3 id3 = new Id3();
                     id3.buildClassifier(data);
-                    
+
                     return id3;
                 case "myid3":
                     MyID3 myid3 = new MyID3();
                     myid3.buildClassifier(data);
-                    
+
                     return myid3;
                 case "j48":
                     J48 j48 = new J48();
+                    j48.setOptions(new String[]{"-U"});
                     j48.buildClassifier(data);
-                    
+
                     return j48;
                 case "myj48":
                     MyJ48 myj48 = new MyJ48();
                     myj48.buildClassifier(data);
-                    
+
                     return myj48;
             }
         } catch (Exception ex) {
             Logger.getLogger(Helper.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         return null;
     }
-    
+
     /**
      * Do a ten fold cross validation using he model and instances
+     *
      * @param data the dataset that will be used
      * @param classifier the classifier that will be used
      */
@@ -157,9 +163,10 @@ public class Helper {
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Function to test the classifier that has been built
+     *
      * @param data the training set that will be used
      * @param classifier the classifier that will be used
      * @param datatest the test set that will be used
@@ -168,7 +175,7 @@ public class Helper {
         try {
             Evaluation eval = new Evaluation(data);
             eval.evaluateModel(classifier, datatest);
-            
+
             System.out
                 .println(eval.toSummaryString("=== Summary ===\n", false));
             System.out.println(eval.toClassDetailsString());
@@ -177,18 +184,18 @@ public class Helper {
             // TODO Auto-generated catch block
         }
     }
-    
+
     /**
      * Split instances into training data and test data to test the classifier
+     *
      * @param data the dataset that will be split
      * @param classifier the classifier that will be used
      * @param percentage the percentage of the split, usually 80 which means 80%
      */
-    public static void percentageSplit(Instances data, Classifier classifier, int percentage)
-    {
+    public static void percentageSplit(Instances data, Classifier classifier, int percentage) {
         Instances dataSet = new Instances(data);
         dataSet.randomize(new Random(1));
-        
+
         int trainSize = Math.round(dataSet.numInstances() * percentage / 100);
         int testSize = dataSet.numInstances() - trainSize;
         Instances trainSet = new Instances(dataSet, 0, trainSize);
@@ -204,6 +211,7 @@ public class Helper {
 
     /**
      * Save a model that has been built to a file
+     *
      * @param classifier the classifier that will be saved
      * @param file the filename for the file
      */
@@ -223,6 +231,7 @@ public class Helper {
 
     /**
      * Load a classifier model from file
+     *
      * @param file the file path to the model file
      * @return
      */
@@ -251,6 +260,7 @@ public class Helper {
 
     /**
      * Classify unlabeled instances in a file using a classifier
+     *
      * @param classifier the classifier chosen to classify the instances
      * @param file the file path to the unlabeled instances
      */
@@ -258,9 +268,9 @@ public class Helper {
         try {
             Instances unlabeled = DataSource.read(file);
             unlabeled.setClassIndex(unlabeled.numAttributes() - 1);
-            
+
             Instances labeled = new Instances(unlabeled);
-            
+
             // label instances
             for (int i = 0; i < unlabeled.numInstances(); i++) {
                 double clsLabel = classifier.classifyInstance(unlabeled.instance(i));
