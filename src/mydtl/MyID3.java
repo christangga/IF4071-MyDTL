@@ -1,6 +1,8 @@
 package mydtl;
 
+import java.io.PrintWriter;
 import java.util.Enumeration;
+import java.util.HashSet;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -8,6 +10,8 @@ import weka.core.Capabilities.Capability;
 import weka.core.Instance;
 import weka.core.Instances;
 import weka.core.NoSupportForMissingValuesException;
+import weka.filters.Filter;
+import weka.filters.unsupervised.attribute.Add;
 
 public class MyID3 extends Classifier {
 
@@ -51,6 +55,7 @@ public class MyID3 extends Classifier {
 
         // attributes
         result.enable(Capability.NOMINAL_ATTRIBUTES);
+        result.enable(Capability.NUMERIC_ATTRIBUTES);
 
         // class
         result.enable(Capability.NOMINAL_CLASS);
@@ -98,6 +103,8 @@ public class MyID3 extends Classifier {
             // Mencari IG maksimum
             double[] infoGains = new double[data.numAttributes()];
             
+            data = toNominalInstances(data);
+            
             Enumeration attEnum = data.enumerateAttributes();
             while (attEnum.hasMoreElements()) {
                 Attribute att = (Attribute) attEnum.nextElement();
@@ -126,6 +133,96 @@ public class MyID3 extends Classifier {
                 for (int j = 0; j < m_Attribute.numValues(); j++) {
                     m_Children[j] = new MyID3();
                     m_Children[j].makeTree(splitData[j]);
+                }
+            }
+        }
+    }
+    
+    private Instances toNominalInstances(Instances data) {
+        Instances finalData = getSortedNumericValues(data);
+        
+        return finalData;
+    }
+    
+    private static Instances getSortedNumericValues(Instances data) {
+        
+        for(int ix = 0; ix < data.numAttributes(); ++ix) {
+            
+            Attribute att = data.attribute(ix);
+            
+            if(data.attribute(ix).isNumeric()) {
+                // Get an array of integer that consists of distinct values of the attribute
+                HashSet<Integer> numericSet = new HashSet<>();
+                for(int i = 0; i < data.numInstances(); ++i) {
+                    numericSet.add((int) (data.instance(i).value(att)));
+                }
+
+                Integer[] numericValues = new Integer[numericSet.size()];
+                int iterator = 0;
+                for(Integer i : numericSet) {
+                    numericValues[iterator] = i;
+                    iterator++;
+                }
+
+                // Sort the array
+                sortArray(numericValues);
+
+                // Search for threshold and get new Instances
+                int threshold = 0;
+                double[] infoGains = new double[numericValues.length-1];
+                Instances[] tempInstances = new Instances[numericValues.length-1];
+                for(int i = 0; i < numericValues.length - 1; ++i) {
+                    tempInstances[i] = convertInstances(data, att, numericValues[i]);
+                    try {
+                        infoGains[i] = computeInfoGain(tempInstances[i], tempInstances[i].attribute(att.name()));
+                    } catch(Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+        
+                data = new Instances(tempInstances[maxIndex(infoGains)]);
+            }
+        }
+        return data;
+    }
+    
+    private static Instances convertInstances(Instances data, Attribute att, int threshold) {
+        Instances newData = new Instances(data);
+        
+        // Add attribute
+        try {
+            Add filter = new Add();
+            filter.setAttributeIndex((att.index()+2)+"");
+            filter.setNominalLabels("<="+threshold+",>"+threshold);
+            filter.setAttributeName(att.name()+"temp");
+            filter.setInputFormat(newData);
+            newData = Filter.useFilter(newData, filter);
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
+        
+        for(int i = 0; i < newData.numInstances(); ++i) {
+            if((int) newData.instance(i).value(newData.attribute(att.name())) <= threshold) {
+                newData.instance(i).setValue(newData.attribute(att.name() + "temp"), "<=" + threshold);
+            } else {
+                newData.instance(i).setValue(newData.attribute(att.name() + "temp"), ">" + threshold);
+            }
+        }
+        
+        Instances finalData = Helper.removeAttribute(newData, (att.index()+1)+"");
+        finalData.renameAttribute(finalData.attribute(att.name()+"temp"), att.name());
+        
+        return finalData;
+    } 
+    
+    private static void sortArray(Integer[] arr) {
+        int temp;
+        for(int i=0; i < arr.length-1; i++){
+            for(int j=1; j < arr.length-i; j++){
+                if(arr[j-1] > arr[j]){
+                    temp=arr[j-1];
+                    arr[j-1] = arr[j];
+                    arr[j] = temp;
                 }
             }
         }
@@ -168,7 +265,7 @@ public class MyID3 extends Classifier {
      * @param array the array of double
      * @return index of array with maximum value
      */
-    private int maxIndex(double[] array) {
+    private static int maxIndex(double[] array) {
         double max = 0;
         int index = 0;
         
@@ -251,7 +348,7 @@ public class MyID3 extends Classifier {
      * @return the information gain for the given attribute and data
      * @throws Exception if computation fails
      */
-    private double computeInfoGain(Instances data, Attribute att)
+    private static double computeInfoGain(Instances data, Attribute att)
         throws Exception {
 
         double infoGain = computeEntropy(data);
@@ -274,7 +371,7 @@ public class MyID3 extends Classifier {
      * @return the entropy of the data class distribution
      * @throws Exception if computation fails
      */
-    private double computeEntropy(Instances data) throws Exception {
+    private static double computeEntropy(Instances data) throws Exception {
 
         double[] labelCounts = new double[data.numClasses()];
         for (int i = 0; i < data.numInstances(); ++i) {
@@ -297,7 +394,7 @@ public class MyID3 extends Classifier {
      * @param num number that will be counted
      * @return logarithm value with base 2
      */
-    private double log2(double num) {
+    private static double log2(double num) {
         return (num == 0) ? 0 : Math.log(num) / Math.log(2);
     }
 
@@ -308,7 +405,7 @@ public class MyID3 extends Classifier {
      * @param att attribute used to split the dataset
      * @return 
      */
-    private Instances[] splitData(Instances data, Attribute att) {
+    private static Instances[] splitData(Instances data, Attribute att) {
 
         Instances[] splitData = new Instances[att.numValues()];
         for (int j = 0; j < att.numValues(); j++) {
