@@ -20,7 +20,7 @@ public class MyJ48 extends Classifier {
     /**
      * The node's children.
      */
-    private MyID3[] m_Children;
+    private MyJ48[] m_Children;
 
     /**
      * Attribute used for splitting.
@@ -124,9 +124,9 @@ public class MyJ48 extends Classifier {
             } else {
                 // Membuat tree baru di bawah node ini
                 Instances[] splitData = splitData(data, m_Attribute);
-                m_Children = new MyID3[m_Attribute.numValues()];
+                m_Children = new MyJ48[m_Attribute.numValues()];
                 for (int j = 0; j < m_Attribute.numValues(); j++) {
-                    m_Children[j] = new MyID3();
+                    m_Children[j] = new MyJ48();
                     m_Children[j].makeTree(splitData[j]);
                 }
             }

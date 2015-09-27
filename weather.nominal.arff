@@ -4,20 +4,20 @@
 @attribute temperature {hot, mild, cool}
 @attribute humidity {high, normal}
 @attribute windy {TRUE, FALSE}
-@attribute play {yes, no}
+@attribute play {yes, no, maybe}
 
 @data
-sunny,hot,high,FALSE,no
+sunny,hot,high,FALSE,maybe
 sunny,hot,high,TRUE,no
 overcast,hot,high,FALSE,yes
 rainy,mild,high,FALSE,yes
 rainy,cool,normal,FALSE,yes
 rainy,cool,normal,TRUE,no
-overcast,cool,normal,TRUE,yes
+overcast,cool,normal,TRUE,maybe
 sunny,mild,high,FALSE,no
 sunny,cool,normal,FALSE,yes
-rainy,mild,normal,FALSE,yes
+rainy,mild,normal,FALSE,maybe
 sunny,mild,normal,TRUE,yes
 overcast,mild,high,TRUE,yes
-overcast,hot,normal,FALSE,yes
+overcast,hot,normal,FALSE,no
 rainy,mild,high,TRUE,no
