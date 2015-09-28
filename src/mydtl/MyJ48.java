@@ -1,7 +1,9 @@
 package mydtl;
 
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -19,6 +21,7 @@ public class MyJ48 extends Classifier {
 
     private final double MISSING_VALUE = Double.NaN;
     private final double DOUBLE_COMPARE_VALUE = 1e-6;
+    private List<Rule> ruleList;
 
     /**
      * The node's children.
@@ -140,6 +143,8 @@ public class MyJ48 extends Classifier {
         }
     }
 
+    
+    
     /**
      * Convert Instances with numeric attributes to nominal attributes
      *
