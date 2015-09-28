@@ -21,10 +21,10 @@ public class MyDTL {
         System.out.println(classifier_myid3.toString());
         System.out.println("=================================================\n");
 
-        System.out.println("==============================");
-        Helper.classifyUsingModel(classifier_id3, DATA_SOURCE_UNLABELED);
-        System.out.println("==============================");
-        Helper.classifyUsingModel(classifier_myid3, DATA_SOURCE_UNLABELED);
-        System.out.println("===============================");
+//        System.out.println("==============================");
+//        Helper.classifyUsingModel(classifier_id3, DATA_SOURCE_UNLABELED);
+//        System.out.println("==============================");
+//        Helper.classifyUsingModel(classifier_myid3, DATA_SOURCE_UNLABELED);
+//        System.out.println("===============================");
     }
 }
