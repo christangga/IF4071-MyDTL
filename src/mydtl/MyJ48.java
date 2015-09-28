@@ -1,7 +1,6 @@
 package mydtl;
 
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import weka.classifiers.Classifier;
@@ -73,7 +72,7 @@ public class MyJ48 extends Classifier {
     }
 
     /**
-     * Builds j48 tree classifier.
+     * Builds myj48 tree classifier.
      *
      * @param data the training data
      * @exception Exception if classifier failed to build
@@ -88,11 +87,17 @@ public class MyJ48 extends Classifier {
         data = new Instances(data);
         data.deleteWithMissingClass();
 
-        makeTree(data);
+        makePrunedTree(data);
     }
 
+    private void makePrunedTree(Instances data) throws Exception {
+        makeTree(data);
+        convertToRule();
+        pruneTree(data);
+    }
+    
     /**
-     * Creates an j48 tree.
+     * Creates an myj48 tree.
      *
      * @param data the training data
      * @exception Exception if tree failed to build
@@ -142,8 +147,20 @@ public class MyJ48 extends Classifier {
             }
         }
     }
-
     
+    /**
+     * Use the list of rule to prune the created tree
+     */
+    private void pruneTree(Instances data) {
+        
+    }
+    
+    /**
+     * Convert Tree to List of Rule
+     */
+    private void convertToRule() {
+        
+    }
     
     /**
      * Convert Instances with numeric attributes to nominal attributes
