@@ -271,6 +271,13 @@ public class Helper {
 
             Instances labeled = new Instances(unlabeled);
 
+            for(int i = 0; i < unlabeled.numAttributes(); ++i) {
+                if(unlabeled.attribute(i).isNumeric()) {
+                    unlabeled.renameAttribute(unlabeled.attribute(i), unlabeled.attribute(i).name() + "temp");
+                    labeled.renameAttribute(labeled.attribute(i), labeled.attribute(i).name() + "temp");
+                }
+            }
+            
             // label instances
             for (int i = 0; i < unlabeled.numInstances(); i++) {
                 double clsLabel = classifier.classifyInstance(unlabeled.instance(i));

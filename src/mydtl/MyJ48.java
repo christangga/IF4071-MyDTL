@@ -1,7 +1,9 @@
 package mydtl;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.stream.DoubleStream;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
@@ -95,6 +97,7 @@ public class MyJ48 extends Classifier {
 
     private void makePrunedTree(Instances data) throws Exception {
         makeTree(data);
+        
         //pruneTree(data);
         //double error = expectedErrorPruning(data);
         //System.out.println("error: "+ error);
@@ -118,25 +121,31 @@ public class MyJ48 extends Classifier {
             m_ClassDistribution = new double[data.numClasses()];  
         } else {
             // Mencari IG maksimum
-            double[] gainRatios = new double[data.numAttributes()];
-
-            data = toNominalInstances(data);
-
-            Enumeration attEnum = data.enumerateAttributes();
+            Instances tempData = toNominalInstances(data);
+            
+            double[] gainRatios = new double[tempData.numAttributes()-1];
+            for(int i = 0; i < gainRatios.length; ++i) {
+                gainRatios[i] = 0;
+            }
+            
+            Enumeration attEnum = tempData.enumerateAttributes();
             while (attEnum.hasMoreElements()) {
                 Attribute att = (Attribute) attEnum.nextElement();
-                gainRatios[att.index()] = computeGainRatio(data, att);
+                if(!att.isNumeric()) {
+                    gainRatios[att.index()] = computeGainRatio(tempData, att);
+                }
             }
 
-            m_Attribute = data.attribute(maxIndex(gainRatios));
+            m_Attribute = tempData.attribute(maxIndex(gainRatios));
+            String attName = m_Attribute.name();
 
             // Menghitung distribusi kelas untuk node tersebut
-            m_ClassDistribution = new double[data.numClasses()];
-            for (int i = 0; i < data.numInstances(); i++) {
-                Instance inst = (Instance) data.instance(i);
+            m_ClassDistribution = new double[tempData.numClasses()];
+            for (int i = 0; i < tempData.numInstances(); i++) {
+                Instance inst = (Instance) tempData.instance(i);
                 m_ClassDistribution[(int) inst.classValue()]++;
             }
-            m_ClassAttribute = data.classAttribute();
+            m_ClassAttribute = tempData.classAttribute();
             
             // Membuat daun jika IG-nya 0
             if (doubleEqual(gainRatios[m_Attribute.index()], 0)) {
@@ -144,13 +153,12 @@ public class MyJ48 extends Classifier {
                 m_IsLeaf = true;
 
                 m_Label = maxIndex(m_ClassDistribution);
-                
             } else {
-                if (isMissing(data, m_Attribute)) {
+                if (isMissing(tempData, m_Attribute)) {
                     //cari modus
-                    int index = findModus(data, m_Attribute);                    
+                    int index = findModus(tempData, m_Attribute);                    
                     //ubah data yang punya missing value
-                    Enumeration dataEnum = data.enumerateInstances();
+                    Enumeration dataEnum = tempData.enumerateInstances();
                     while (dataEnum.hasMoreElements()) {
                         Instance inst = (Instance) dataEnum.nextElement();
                         if (inst.isMissing(m_Attribute)) {
@@ -159,7 +167,30 @@ public class MyJ48 extends Classifier {
                     }
                 }
                 // Membuat tree baru di bawah node ini
-                Instances[] splitData = splitData(data, m_Attribute);
+                Instances[] splitData = splitData(tempData, m_Attribute);
+                
+                for (int i = 0; i < splitData.length; ++i) {
+                    List<Integer> nominalIndex = new ArrayList<>();
+                    for(int j = 0; j < splitData[i].numAttributes(); ++j) {
+                        if(splitData[i].attribute(j).name().contains("temp") && 
+                                !splitData[i].attribute(j).name().equalsIgnoreCase(m_Attribute.name())) {
+                            nominalIndex.add(splitData[i].attribute(j).index()+1);
+                        }
+                    }
+                    
+                    String nominalIndexString = "";
+                    for(int j = 0; j < nominalIndex.size() - 1; ++j) {
+                        nominalIndexString += String.valueOf(nominalIndex.get(j)) + ",";
+                    }
+                    nominalIndexString += String.valueOf(nominalIndex.get(nominalIndex.size()-1));
+                    splitData[i] = Helper.removeAttribute(splitData[i], nominalIndexString);
+                    if(m_Attribute.name().contains("temp")) {
+                        Attribute att = splitData[i].attribute(m_Attribute.name().replace("temp", ""));
+                        splitData[i] = Helper.removeAttribute(splitData[i], String.valueOf(att.index()+1));
+                    }
+                }
+                m_Attribute = tempData.attribute(attName.replace("temp", ""));
+                
                 m_Children = new MyJ48[m_Attribute.numValues()];
                 for (int j = 0; j < m_Attribute.numValues(); j++) {
                     m_Children[j] = new MyJ48();
@@ -178,6 +209,7 @@ public class MyJ48 extends Classifier {
     private boolean isMissing(Instances data, Attribute attr) {
         boolean isMissing=false;
         Enumeration dataEnum = data.enumerateInstances();
+
         while (dataEnum.hasMoreElements() && !isMissing) {
             Instance inst = (Instance) dataEnum.nextElement();
             if (inst.isMissing(attr)) {
@@ -313,17 +345,22 @@ public class MyJ48 extends Classifier {
                 sortArray(numericValues);
 
                 // Search for threshold and get new Instances
-                double[] infoGains = new double[numericValues.length - 1];
-                Instances[] tempInstances = new Instances[numericValues.length - 1];
-                for (int i = 0; i < numericValues.length - 1; ++i) {
-                    tempInstances[i] = convertInstances(data, att, numericValues[i]);
-                    try {
-                        infoGains[i] = computeGainRatio(tempInstances[i], tempInstances[i].attribute(att.name()));
-                    } catch (Exception e) {
+                if(numericValues.length > 1){
+                    double[] infoGains = new double[numericValues.length - 1];
+                    Instances[] tempInstances = new Instances[numericValues.length - 1];
+                    for (int i = 0; i < numericValues.length - 1; ++i) {
+                        tempInstances[i] = convertInstances(data, att, numericValues[i]);
+                        try {
+                            infoGains[i] = computeGainRatio(tempInstances[i], tempInstances[i].attribute(att.name()));
+                        } catch (Exception e) {
+                        }
                     }
+                    data = new Instances(tempInstances[maxIndex(infoGains)]);
+                } else {
+                    data = convertInstances(data, att, numericValues[0]);
                 }
 
-                data = new Instances(tempInstances[maxIndex(infoGains)]);
+                
             }
         }
         return data;
@@ -360,10 +397,10 @@ public class MyJ48 extends Classifier {
             }
         }
 
-        Instances finalData = Helper.removeAttribute(newData, (att.index() + 1) + "");
-        finalData.renameAttribute(finalData.attribute(att.name() + "temp"), att.name());
+//        Instances finalData = Helper.removeAttribute(newData, (att.index() + 1) + "");
+//        finalData.renameAttribute(finalData.attribute(att.name() + "temp"), att.name());
 
-        return finalData;
+        return newData;
     }
 
     /**
@@ -448,7 +485,7 @@ public class MyJ48 extends Classifier {
     @Override
     public double classifyInstance(Instance instance)
         throws NoSupportForMissingValuesException {
-
+        int index = 0;
         if (m_Attribute == null) {
             return m_Label;
         } else {
@@ -463,17 +500,31 @@ public class MyJ48 extends Classifier {
                 }
             }
 
-            if (isComparison) {
-                double threshold = getThreshold(val);
-                double instanceValue = (double) instance.value(m_Attribute);
-
-                if (instanceValue <= threshold) {
-                    instance.setValue(m_Attribute, "<=" + String.valueOf(threshold));
-                } else {
-                    instance.setValue(m_Attribute, ">" + String.valueOf(threshold));
+            for(int i = 0; i < instance.numAttributes(); ++i) {
+                if(instance.attribute(i).isNumeric()) {
+                    if(instance.attribute(i).name().equalsIgnoreCase(m_Attribute.name())) {
+                        break;
+                    }
+                    index++;
                 }
             }
-            return m_Children[(int) instance.value(m_Attribute)].
+            
+            if (isComparison) {
+                double threshold = getThreshold(val);
+                double instanceValue = (double) instance.value(index);
+                
+
+                if (instanceValue <= threshold) {
+                    return m_Children[(int) m_Attribute.indexOfValue("<="+threshold)].
+                classifyInstance(instance);
+//                    instance.setValue(m_Attribute, "<=" + String.valueOf(threshold));
+                } else {
+                    return m_Children[(int) m_Attribute.indexOfValue(">"+threshold)].
+                classifyInstance(instance);
+//                    instance.setValue(m_Attribute, ">" + String.valueOf(threshold));
+                }
+            }
+            return m_Children[(int) instance.value(index)].
                 classifyInstance(instance);
         }
     }
