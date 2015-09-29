@@ -3,7 +3,9 @@ package mydtl;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.DoubleStream;
 import weka.classifiers.Classifier;
+import weka.classifiers.trees.j48.Distribution;
 import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Instance;
@@ -112,14 +114,13 @@ public class MyJ48 extends Classifier {
     private void makeTree(Instances data) throws Exception {
 
         m_IsLeaf = false;
-        
+
         // Mengecek apakah tidak terdapat instance yang dalam node ini
         if (data.numInstances() == 0) {
             m_IsLeaf = true;
             m_Attribute = null;
             m_Label = MISSING_VALUE;
-            m_NumInstances = 0;
-            m_ClassDistribution = new double[data.numClasses()];
+            m_ClassDistribution = new double[data.numClasses()];  
         } else {
             // Mencari IG maksimum
             double[] gainRatios = new double[data.numAttributes()];
@@ -140,7 +141,7 @@ public class MyJ48 extends Classifier {
                 Instance inst = (Instance) data.instance(i);
                 m_ClassDistribution[(int) inst.classValue()]++;
             }
-            
+
             // Membuat daun jika IG-nya 0
             if (doubleEqual(gainRatios[m_Attribute.index()], 0)) {
                 m_Attribute = null;
@@ -151,6 +152,18 @@ public class MyJ48 extends Classifier {
                 m_NumInstances =  m_ClassDistribution[(int) m_Label];
                 m_ClassAttribute = data.classAttribute();
             } else {
+                if (isMissing(data, m_Attribute)) {
+                    //cari modus
+                    int index = findModus(data, m_Attribute);                    
+                    //ubah data yang punya missing value
+                    Enumeration dataEnum = data.enumerateInstances();
+                    while (dataEnum.hasMoreElements()) {
+                        Instance inst = (Instance) dataEnum.nextElement();
+                        if (inst.isMissing(m_Attribute)) {
+                            inst.setValue(m_Attribute, m_Attribute.value(index));
+                        }
+                    }
+                }
                 // Membuat tree baru di bawah node ini
                 Instances[] splitData = splitData(data, m_Attribute);
                 m_Children = new MyJ48[m_Attribute.numValues()];
@@ -160,6 +173,53 @@ public class MyJ48 extends Classifier {
                 }
             }
         }
+    }
+    
+    /**
+     * search data that has missing value for attribute
+     * @param data the data for searching
+     * @param attr the attribute for searching
+     * @return if data has missing value for attribute
+     */
+    private boolean isMissing(Instances data, Attribute attr) {
+        boolean isMissing=false;
+        Enumeration dataEnum = data.enumerateInstances();
+        while (dataEnum.hasMoreElements() && !isMissing) {
+            Instance inst = (Instance) dataEnum.nextElement();
+            if (inst.isMissing(attr)) {
+                isMissing = true;
+            }
+        }
+        return isMissing;
+    }
+    
+    /**
+     * search index of attribute that has most common value
+     * @param data the data for searching
+     * @param attr the attribute for searching
+     * @return index of attribute that has most common value
+     */
+    private int findModus(Instances data, Attribute attr) {
+        //cari modus
+        int[] modus = new int[attr.numValues()];
+        Enumeration dataEnumeration = data.enumerateInstances();
+
+        while (dataEnumeration.hasMoreElements()) {
+            Instance inst = (Instance) dataEnumeration.nextElement();
+            if (!inst.isMissing(attr)) {
+                modus[(int) inst.value(attr)]++;
+            }
+        }
+        //cari modus terbesar
+        int max=0;
+        int index=-1;
+        for(int i=0 ;i< modus.length;++i) {
+            if(modus[i] > max) {
+                max = modus[i];
+                index = i;
+            }   
+        }
+        return index;
     }
     
     /**
@@ -622,5 +682,23 @@ public class MyJ48 extends Classifier {
             }
         }
         return text.toString();
+    }
+    
+    public double staticErrorEstimate(int N, int n, int k) {
+        double E = (N - n + k - 1) / (N + k);
+        
+        return E;
+    }
+    
+    public double backUpError() {
+        double E = 0;
+        int totalInstances = (int) DoubleStream.of(m_ClassDistribution).sum();
+        for (MyJ48 child : m_Children) {
+            int totalChildInstances = (int) DoubleStream.of(child.m_ClassDistribution).sum();
+            E += totalChildInstances/totalInstances
+                * staticErrorEstimate(totalChildInstances, (int) child.m_ClassDistribution[(int) child.m_Label], m_Children.length);
+        }
+        
+        return E;
     }
 }
