@@ -20,7 +20,6 @@ public class MyJ48 extends Classifier {
 
     private final double MISSING_VALUE = Double.NaN;
     private final double DOUBLE_COMPARE_VALUE = 1e-6;
-    private List<Rule> ruleList;
 
     /**
      * The node's children.
@@ -36,6 +35,12 @@ public class MyJ48 extends Classifier {
      * Class value if node is leaf.
      */
     private double m_Label;
+    
+    /**
+     * Number of instance if node is leaf.
+     */
+    private double m_NumInstances;
+    
 
     /**
      * Class distribution if node is leaf.
@@ -47,6 +52,9 @@ public class MyJ48 extends Classifier {
      */
     private Attribute m_ClassAttribute;
 
+    
+    private boolean m_IsLeaf;
+    
     /**
      * Returns default capabilities of the classifier.
      *
@@ -60,6 +68,7 @@ public class MyJ48 extends Classifier {
         // attributes
         result.enable(Capabilities.Capability.NOMINAL_ATTRIBUTES);
         result.enable(Capabilities.Capability.NUMERIC_ATTRIBUTES);
+        result.enable(Capabilities.Capability.MISSING_VALUES);
 
         // class
         result.enable(Capabilities.Capability.NOMINAL_CLASS);
@@ -92,8 +101,6 @@ public class MyJ48 extends Classifier {
 
     private void makePrunedTree(Instances data) throws Exception {
         makeTree(data);
-        convertToRule();
-        pruneTree(data);
     }
     
     /**
@@ -104,10 +111,14 @@ public class MyJ48 extends Classifier {
      */
     private void makeTree(Instances data) throws Exception {
 
+        m_IsLeaf = false;
+        
         // Mengecek apakah tidak terdapat instance yang dalam node ini
         if (data.numInstances() == 0) {
+            m_IsLeaf = true;
             m_Attribute = null;
             m_Label = MISSING_VALUE;
+            m_NumInstances = 0;
             m_ClassDistribution = new double[data.numClasses()];
         } else {
             // Mencari IG maksimum
@@ -123,18 +134,21 @@ public class MyJ48 extends Classifier {
 
             m_Attribute = data.attribute(maxIndex(gainRatios));
 
+            // Menghitung distribusi kelas untuk node tersebut
+            m_ClassDistribution = new double[data.numClasses()];
+            for (int i = 0; i < data.numInstances(); i++) {
+                Instance inst = (Instance) data.instance(i);
+                m_ClassDistribution[(int) inst.classValue()]++;
+            }
+            
             // Membuat daun jika IG-nya 0
             if (doubleEqual(gainRatios[m_Attribute.index()], 0)) {
                 m_Attribute = null;
+                m_IsLeaf = true;
 
-                m_ClassDistribution = new double[data.numClasses()];
-                for (int i = 0; i < data.numInstances(); i++) {
-                    Instance inst = (Instance) data.instance(i);
-                    m_ClassDistribution[(int) inst.classValue()]++;
-                }
-
-                normalizeDouble(m_ClassDistribution);
+                // normalizeDouble(m_ClassDistribution);
                 m_Label = maxIndex(m_ClassDistribution);
+                m_NumInstances =  m_ClassDistribution[(int) m_Label];
                 m_ClassAttribute = data.classAttribute();
             } else {
                 // Membuat tree baru di bawah node ini
@@ -153,6 +167,62 @@ public class MyJ48 extends Classifier {
      */
     private void pruneTree(Instances data) {
         
+        if (!m_IsLeaf){
+
+            // Prune all subtrees.
+            for (int i=0;i<m_Children.length;i++) {
+                System.out.println("lala "+m_Children[i].m_NumInstances);
+                m_Children[i].pruneTree(data);
+            }
+            //cari modus dari valueankanya 
+            
+            int maxIndex=0;
+            for (int i=0; i<m_Children[i].m_NumInstances; i++) {
+                if (m_Children[maxIndex].m_NumInstances > m_Children[i].m_NumInstances) {
+                    maxIndex = i;
+                }
+            }
+            
+//            // Compute error for largest branch
+//            indexOfLargestBranch = localModel().distribution().maxBag();
+//            if (m_subtreeRaising) {
+//              errorsLargestBranch = son(indexOfLargestBranch).
+//                getEstimatedErrorsForBranch((Instances)m_train);
+//            } else {
+//              errorsLargestBranch = Double.MAX_VALUE;
+//            }
+//
+//      // Compute error if this Tree would be leaf
+//      errorsLeaf = 
+//	getEstimatedErrorsForDistribution(localModel().distribution());
+//
+//      // Compute error for the whole subtree
+//      errorsTree = getEstimatedErrors();
+//
+//      // Decide if leaf is best choice.
+//      if (Utils.smOrEq(errorsLeaf,errorsTree+0.1) &&
+//	  Utils.smOrEq(errorsLeaf,errorsLargestBranch+0.1)){
+//
+//	// Free son Trees
+//	m_sons = null;
+//	m_isLeaf = true;
+//		
+//	// Get NoSplit Model for node.
+//	m_localModel = new NoSplit(localModel().distribution());
+//	return;
+//      }
+//
+//      // Decide if largest branch is better choice
+//      // than whole subtree.
+//      if (Utils.smOrEq(errorsLargestBranch,errorsTree+0.1)){
+//	largestBranch = son(indexOfLargestBranch);
+//	m_sons = largestBranch.m_sons;
+//	m_localModel = largestBranch.localModel();
+//	m_isLeaf = largestBranch.m_isLeaf;
+//	newDistribution(m_train);
+//	prune();
+//      }
+        }
     }
     
     /**
@@ -326,9 +396,6 @@ public class MyJ48 extends Classifier {
     public double classifyInstance(Instance instance)
         throws NoSupportForMissingValuesException {
 
-        if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("MyJ48: Cannot handle missing values");
-        }
         if (m_Attribute == null) {
             return m_Label;
         } else {
@@ -542,6 +609,7 @@ public class MyJ48 extends Classifier {
                 text.append(": null");
             } else {
                 text.append(": ").append(m_ClassAttribute.value((int) m_Label));
+                text.append(" ").append(m_NumInstances);
             }
         } else {
             for (int j = 0; j < m_Attribute.numValues(); j++) {
@@ -554,108 +622,5 @@ public class MyJ48 extends Classifier {
             }
         }
         return text.toString();
-    }
-
-    /**
-     * Adds this tree recursively to the buffer.
-     *
-     * @param id the unique id for the method
-     * @param buffer the buffer to add the source code to
-     * @return the last ID being used
-     * @throws Exception if something goes wrong
-     */
-    protected int toSource(int id, StringBuffer buffer) throws Exception {
-        int result;
-        int i;
-        int newID;
-        StringBuffer[] subBuffers;
-
-        buffer.append("\n");
-        buffer.append("  protected static double node").append(id).append("(Object[] i) {\n");
-
-        // leaf?
-        if (m_Attribute == null) {
-            result = id;
-            if (Double.isNaN(m_Label)) {
-                buffer.append("    return Double.NaN;");
-            } else {
-                buffer.append("    return ").append(m_Label).append(";");
-            }
-            if (m_ClassAttribute != null) {
-                buffer.append(" // ").append(m_ClassAttribute.value((int) m_Label));
-            }
-            buffer.append("\n");
-            buffer.append("  }\n");
-        } else {
-            buffer.append("    checkMissing(i, ").append(m_Attribute.index()).append(");\n\n");
-            buffer.append("    // ").append(m_Attribute.name()).append("\n");
-
-            // subtree calls
-            subBuffers = new StringBuffer[m_Attribute.numValues()];
-            newID = id;
-            for (i = 0; i < m_Attribute.numValues(); i++) {
-                newID++;
-
-                buffer.append("    ");
-                if (i > 0) {
-                    buffer.append("else ");
-                }
-                buffer.append("if (((String) i[").append(m_Attribute.index()).append("]).equals(\"").append(m_Attribute.value(i)).append("\"))\n");
-                buffer.append("      return node").append(newID).append("(i);\n");
-
-                subBuffers[i] = new StringBuffer();
-                newID = m_Children[i].toSource(newID, subBuffers[i]);
-            }
-            buffer.append("    else\n");
-            buffer.append("      throw new IllegalArgumentException(\"Value '\" + i[").append(m_Attribute.index()).append("] + \"' is not allowed!\");\n");
-            buffer.append("  }\n");
-
-            // output subtree code
-            for (i = 0; i < m_Attribute.numValues(); i++) {
-                buffer.append(subBuffers[i].toString());
-            }
-            subBuffers = null;
-
-            result = newID;
-        }
-
-        return result;
-    }
-
-    /**
-     * Returns a string that describes the classifier as source. The classifier
-     * will be contained in a class with the given name (there may be auxiliary
-     * classes), and will contain a method with the signature:
-     * <pre><code>
-     * public static double classify(Object[] i);
-     * </code></pre> where the array <code>i</code> contains elements that are
-     * either Double, String, with missing values represented as null. The
-     * generated code is public domain and comes with no warranty. <br/>
-     * Note: works only if class attribute is the last attribute in the dataset.
-     *
-     * @param className the name that should be given to the source class.
-     * @return the object source described by a string
-     * @throws Exception if the source can't be computed
-     */
-    public String toSource(String className) throws Exception {
-        StringBuffer result;
-        int id;
-
-        result = new StringBuffer();
-
-        result.append("class ").append(className).append(" {\n");
-        result.append("  private static void checkMissing(Object[] i, int index) {\n");
-        result.append("    if (i[index] == null)\n");
-        result.append("      throw new IllegalArgumentException(\"Null values "
-            + "are not allowed!\");\n");
-        result.append("  }\n\n");
-        result.append("  public static double classify(Object[] i) {\n");
-        id = 0;
-        result.append("    return node").append(id).append("(i);\n");
-        result.append("  }\n");
-        toSource(id, result);
-        result.append("}\n");
-
-        return result.toString();
     }
 }

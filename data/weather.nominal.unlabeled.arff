@@ -7,4 +7,4 @@
 @attribute play {yes, no}
 
 @data
-overcast, cool,normal,TRUE,?
+?, cool,normal,TRUE,?
