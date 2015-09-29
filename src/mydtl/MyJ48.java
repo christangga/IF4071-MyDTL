@@ -105,10 +105,6 @@ public class MyJ48 extends Classifier {
      * @exception Exception if tree failed to build
      */
     private void makeTree(Instances data) throws Exception {
-        
-        System.out.println("-"+data.numInstances());
-        System.out.println("-"+data);
-
         // Mengecek apakah tidak terdapat instance yang dalam node ini
         if (data.numInstances() == 0) {
             m_Attribute = null;
@@ -126,9 +122,7 @@ public class MyJ48 extends Classifier {
                 gainRatios[att.index()] = computeGainRatio(data, att);
             }
 
-            m_Attribute = data.attribute(maxIndex(gainRatios));
-            System.out.println("atribut="+m_Attribute);
-            
+            m_Attribute = data.attribute(maxIndex(gainRatios));            
             // Membuat daun jika IG-nya 0
             if (doubleEqual(gainRatios[m_Attribute.index()], 0)) {
                 m_Attribute = null;
@@ -142,20 +136,16 @@ public class MyJ48 extends Classifier {
                 normalizeDouble(m_ClassDistribution);
                 m_Label = maxIndex(m_ClassDistribution);
                 m_ClassAttribute = data.classAttribute();
-                System.out.println("label="+m_Label);
             } else {
                 if (isMissing(data, m_Attribute)) {
                     //cari modus
                     int index = findModus(data, m_Attribute);                    
-                    System.out.println( index + " index "+m_Attribute.value(index));
                     //ubah data yang punya missing value
                     Enumeration dataEnum = data.enumerateInstances();
                     while (dataEnum.hasMoreElements()) {
                         Instance inst = (Instance) dataEnum.nextElement();
                         if (inst.isMissing(m_Attribute)) {
-                            System.out.println("~"+inst);
                             inst.setValue(m_Attribute, m_Attribute.value(index));
-                            System.out.println("~baru~"+inst);
                         }
                     }
                 }
@@ -199,13 +189,10 @@ public class MyJ48 extends Classifier {
         int[] modus = new int[attr.numValues()];
         Enumeration dataEnumeration = data.enumerateInstances();
 
-        System.out.println("missing : "+ data.numInstances());
         while (dataEnumeration.hasMoreElements()) {
             Instance inst = (Instance) dataEnumeration.nextElement();
-            System.out.println("=instance="+inst);
             if (!inst.isMissing(attr)) {
                 modus[(int) inst.value(attr)]++;
-                System.out.println("--- "+inst.value(attr)+ " "+ (int) inst.value(attr));
             }
         }
         //cari modus terbesar
