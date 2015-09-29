@@ -2,10 +2,8 @@ package mydtl;
 
 import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.List;
 import java.util.stream.DoubleStream;
 import weka.classifiers.Classifier;
-import weka.classifiers.trees.j48.Distribution;
 import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Instance;
@@ -97,7 +95,9 @@ public class MyJ48 extends Classifier {
 
     private void makePrunedTree(Instances data) throws Exception {
         makeTree(data);
-        pruneTree(data);
+        //pruneTree(data);
+        //double error = expectedErrorPruning(data);
+        //System.out.println("error: "+ error);
     }
     
     /**
@@ -225,23 +225,62 @@ public class MyJ48 extends Classifier {
 
             // Prune all subtrees.
             for (int i=0;i<m_Children.length;i++) {
-                System.out.println("==========================sblm");
-                System.out.println(this.toString());
+//                System.out.println("==========================sblm " + m_Attribute+ " "+ i);
+//                System.out.println(m_Children[i].toString());
                 m_Children[i].pruneTree(data);
-                System.out.println(this.toString());
-                System.out.println("==========================sesudah");
+//                System.out.println(m_Children[i].toString());
+//                System.out.println("==========================sesudah "+ m_Attribute);
             }
             
             // Cari nilai Backup error dari node tersebut 
             double backupError = backUpError();
             double staticError = staticErrorEstimate((int) DoubleStream.of(m_ClassDistribution).sum(), 
                     (int) m_ClassDistribution[maxIndex(m_ClassDistribution)], m_ClassDistribution.length);
-            
+//            System.out.println("backup error  "+ backupError );
+//            System.out.println("static error  "+ staticError );
+
             if(backupError > staticError) {
                 m_Attribute = null;
                 m_Label = maxIndex(m_ClassDistribution);
                 m_Children = null;
                 m_IsLeaf = true;
+//                System.out.println("prune ~~ " );
+
+            }
+        }
+    }
+    
+    private double expectedErrorPruning(Instances data) {
+
+        double staticError = staticErrorEstimate((int) DoubleStream.of(m_ClassDistribution).sum(), 
+                    (int) m_ClassDistribution[maxIndex(m_ClassDistribution)], m_ClassDistribution.length);
+//            System.out.println("static error:"+ (int) DoubleStream.of(m_ClassDistribution).sum() + " "+ 
+//                    (int) m_ClassDistribution[maxIndex(m_ClassDistribution)]+" " + m_ClassDistribution.length);
+//            System.out.println("static error:"+staticError);
+        if (m_IsLeaf) {
+            return staticError;
+        } else {
+            double backupError = 0;
+            double totalInstances = DoubleStream.of(m_ClassDistribution).sum();
+            for (int i=0;i<m_Children.length;i++) {
+                double totalChildInstances = DoubleStream.of(m_Children[i].m_ClassDistribution).sum();
+//                System.out.println("sebelumnya======  " + m_Attribute);
+//                System.out.println(m_Children[i]);
+                backupError += totalChildInstances/totalInstances * m_Children[i].expectedErrorPruning(data);
+//                System.out.println("sesudah======  "+ m_Attribute);
+//                System.out.println(m_Children[i]);
+            }
+            System.out.println("backup error: "+backupError);
+
+            if (staticError < backupError ) {
+                m_Attribute = null;
+                m_Label = maxIndex(m_ClassDistribution);
+                m_Children = null;
+                m_IsLeaf = true;
+                //System.out.println("prune juga ~~ " );
+                return staticError; 
+            } else {
+                return backupError;
             }
         }
     }
@@ -623,6 +662,10 @@ public class MyJ48 extends Classifier {
                 text.append(": null");
             } else {
                 text.append(": ").append(m_ClassAttribute.value((int) m_Label));
+                for (int i=0; i< m_ClassDistribution.length;i++) {
+                    text.append(" " +  m_ClassDistribution[i]);
+                }
+                
             }
         } else {
             for (int j = 0; j < m_Attribute.numValues(); j++) {
@@ -648,8 +691,10 @@ public class MyJ48 extends Classifier {
         double totalInstances = DoubleStream.of(m_ClassDistribution).sum();
         for (MyJ48 child : m_Children) {
             double totalChildInstances = DoubleStream.of(child.m_ClassDistribution).sum();
+            System.out.println("");
             E += totalChildInstances/totalInstances
                 * staticErrorEstimate((int) totalChildInstances, (int) child.m_ClassDistribution[(int) child.m_Label], child.m_ClassDistribution.length);
+                
         }
         
         return E;
