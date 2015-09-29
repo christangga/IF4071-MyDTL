@@ -3,6 +3,7 @@ package mydtl;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.DoubleStream;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -133,7 +134,7 @@ public class MyJ48 extends Classifier {
                     m_ClassDistribution[(int) inst.classValue()]++;
                 }
 
-                normalizeDouble(m_ClassDistribution);
+                // normalizeDouble(m_ClassDistribution);
                 m_Label = maxIndex(m_ClassDistribution);
                 m_ClassAttribute = data.classAttribute();
             } else {
@@ -658,4 +659,23 @@ public class MyJ48 extends Classifier {
 
         return result.toString();
     }
+    
+    public double staticErrorEstimate(int N, int n, int k) {
+        double E = (N - n + k - 1) / (N + k);
+        
+        return E;
+    }
+    
+    public double backUpError() {
+        double E = 0;
+        int totalInstances = (int) DoubleStream.of(m_ClassDistribution).sum();
+        for (MyJ48 child : m_Children) {
+            int totalChildInstances = (int) DoubleStream.of(child.m_ClassDistribution).sum();
+            E += totalChildInstances/totalInstances
+                * staticErrorEstimate(totalChildInstances, (int) child.m_ClassDistribution[(int) child.m_Label], m_Children.length);
+        }
+        
+        return E;
+    }
+    
 }
