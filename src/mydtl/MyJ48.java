@@ -4,6 +4,7 @@ import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import weka.classifiers.Classifier;
+import weka.classifiers.trees.j48.Distribution;
 import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Instance;
@@ -60,6 +61,7 @@ public class MyJ48 extends Classifier {
         // attributes
         result.enable(Capabilities.Capability.NOMINAL_ATTRIBUTES);
         result.enable(Capabilities.Capability.NUMERIC_ATTRIBUTES);
+        result.enable(Capabilities.Capability.MISSING_VALUES);
 
         // class
         result.enable(Capabilities.Capability.NOMINAL_CLASS);
@@ -103,12 +105,15 @@ public class MyJ48 extends Classifier {
      * @exception Exception if tree failed to build
      */
     private void makeTree(Instances data) throws Exception {
+        
+        System.out.println("-"+data.numInstances());
+        System.out.println("-"+data);
 
         // Mengecek apakah tidak terdapat instance yang dalam node ini
         if (data.numInstances() == 0) {
             m_Attribute = null;
             m_Label = MISSING_VALUE;
-            m_ClassDistribution = new double[data.numClasses()];
+            m_ClassDistribution = new double[data.numClasses()];  
         } else {
             // Mencari IG maksimum
             double[] gainRatios = new double[data.numAttributes()];
@@ -122,7 +127,8 @@ public class MyJ48 extends Classifier {
             }
 
             m_Attribute = data.attribute(maxIndex(gainRatios));
-
+            System.out.println("atribut="+m_Attribute);
+            
             // Membuat daun jika IG-nya 0
             if (doubleEqual(gainRatios[m_Attribute.index()], 0)) {
                 m_Attribute = null;
@@ -136,7 +142,23 @@ public class MyJ48 extends Classifier {
                 normalizeDouble(m_ClassDistribution);
                 m_Label = maxIndex(m_ClassDistribution);
                 m_ClassAttribute = data.classAttribute();
+                System.out.println("label="+m_Label);
             } else {
+                if (isMissing(data, m_Attribute)) {
+                    //cari modus
+                    int index = findModus(data, m_Attribute);                    
+                    System.out.println( index + " index "+m_Attribute.value(index));
+                    //ubah data yang punya missing value
+                    Enumeration dataEnum = data.enumerateInstances();
+                    while (dataEnum.hasMoreElements()) {
+                        Instance inst = (Instance) dataEnum.nextElement();
+                        if (inst.isMissing(m_Attribute)) {
+                            System.out.println("~"+inst);
+                            inst.setValue(m_Attribute, m_Attribute.value(index));
+                            System.out.println("~baru~"+inst);
+                        }
+                    }
+                }
                 // Membuat tree baru di bawah node ini
                 Instances[] splitData = splitData(data, m_Attribute);
                 m_Children = new MyJ48[m_Attribute.numValues()];
@@ -146,6 +168,56 @@ public class MyJ48 extends Classifier {
                 }
             }
         }
+    }
+    
+    /**
+     * search data that has missing value for attribute
+     * @param data the data for searching
+     * @param attr the attribute for searching
+     * @return if data has missing value for attribute
+     */
+    private boolean isMissing(Instances data, Attribute attr) {
+        boolean isMissing=false;
+        Enumeration dataEnum = data.enumerateInstances();
+        while (dataEnum.hasMoreElements() && !isMissing) {
+            Instance inst = (Instance) dataEnum.nextElement();
+            if (inst.isMissing(attr)) {
+                isMissing = true;
+            }
+        }
+        return isMissing;
+    }
+    
+    /**
+     * search index of attribute that has most common value
+     * @param data the data for searching
+     * @param attr the attribute for searching
+     * @return index of attribute that has most common value
+     */
+    private int findModus(Instances data, Attribute attr) {
+        //cari modus
+        int[] modus = new int[attr.numValues()];
+        Enumeration dataEnumeration = data.enumerateInstances();
+
+        System.out.println("missing : "+ data.numInstances());
+        while (dataEnumeration.hasMoreElements()) {
+            Instance inst = (Instance) dataEnumeration.nextElement();
+            System.out.println("=instance="+inst);
+            if (!inst.isMissing(attr)) {
+                modus[(int) inst.value(attr)]++;
+                System.out.println("--- "+inst.value(attr)+ " "+ (int) inst.value(attr));
+            }
+        }
+        //cari modus terbesar
+        int max=0;
+        int index=-1;
+        for(int i=0 ;i< modus.length;++i) {
+            if(modus[i] > max) {
+                max = modus[i];
+                index = i;
+            }   
+        }
+        return index;
     }
     
     /**
