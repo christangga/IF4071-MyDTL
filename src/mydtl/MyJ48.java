@@ -39,12 +39,6 @@ public class MyJ48 extends Classifier {
     private double m_Label;
     
     /**
-     * Number of instance if node is leaf.
-     */
-    private double m_NumInstances;
-    
-
-    /**
      * Class distribution if node is leaf.
      */
     private double[] m_ClassDistribution;
@@ -103,6 +97,7 @@ public class MyJ48 extends Classifier {
 
     private void makePrunedTree(Instances data) throws Exception {
         makeTree(data);
+        pruneTree(data);
     }
     
     /**
@@ -141,16 +136,15 @@ public class MyJ48 extends Classifier {
                 Instance inst = (Instance) data.instance(i);
                 m_ClassDistribution[(int) inst.classValue()]++;
             }
-
+            m_ClassAttribute = data.classAttribute();
+            
             // Membuat daun jika IG-nya 0
             if (doubleEqual(gainRatios[m_Attribute.index()], 0)) {
                 m_Attribute = null;
                 m_IsLeaf = true;
 
-                // normalizeDouble(m_ClassDistribution);
                 m_Label = maxIndex(m_ClassDistribution);
-                m_NumInstances =  m_ClassDistribution[(int) m_Label];
-                m_ClassAttribute = data.classAttribute();
+                
             } else {
                 if (isMissing(data, m_Attribute)) {
                     //cari modus
@@ -231,65 +225,25 @@ public class MyJ48 extends Classifier {
 
             // Prune all subtrees.
             for (int i=0;i<m_Children.length;i++) {
-                System.out.println("lala "+m_Children[i].m_NumInstances);
+                System.out.println("==========================sblm");
+                System.out.println(this.toString());
                 m_Children[i].pruneTree(data);
-            }
-            //cari modus dari valueankanya 
-            
-            int maxIndex=0;
-            for (int i=0; i<m_Children[i].m_NumInstances; i++) {
-                if (m_Children[maxIndex].m_NumInstances > m_Children[i].m_NumInstances) {
-                    maxIndex = i;
-                }
+                System.out.println(this.toString());
+                System.out.println("==========================sesudah");
             }
             
-//            // Compute error for largest branch
-//            indexOfLargestBranch = localModel().distribution().maxBag();
-//            if (m_subtreeRaising) {
-//              errorsLargestBranch = son(indexOfLargestBranch).
-//                getEstimatedErrorsForBranch((Instances)m_train);
-//            } else {
-//              errorsLargestBranch = Double.MAX_VALUE;
-//            }
-//
-//      // Compute error if this Tree would be leaf
-//      errorsLeaf = 
-//	getEstimatedErrorsForDistribution(localModel().distribution());
-//
-//      // Compute error for the whole subtree
-//      errorsTree = getEstimatedErrors();
-//
-//      // Decide if leaf is best choice.
-//      if (Utils.smOrEq(errorsLeaf,errorsTree+0.1) &&
-//	  Utils.smOrEq(errorsLeaf,errorsLargestBranch+0.1)){
-//
-//	// Free son Trees
-//	m_sons = null;
-//	m_isLeaf = true;
-//		
-//	// Get NoSplit Model for node.
-//	m_localModel = new NoSplit(localModel().distribution());
-//	return;
-//      }
-//
-//      // Decide if largest branch is better choice
-//      // than whole subtree.
-//      if (Utils.smOrEq(errorsLargestBranch,errorsTree+0.1)){
-//	largestBranch = son(indexOfLargestBranch);
-//	m_sons = largestBranch.m_sons;
-//	m_localModel = largestBranch.localModel();
-//	m_isLeaf = largestBranch.m_isLeaf;
-//	newDistribution(m_train);
-//	prune();
-//      }
+            // Cari nilai Backup error dari node tersebut 
+            double backupError = backUpError();
+            double staticError = staticErrorEstimate((int) DoubleStream.of(m_ClassDistribution).sum(), 
+                    (int) m_ClassDistribution[maxIndex(m_ClassDistribution)], m_ClassDistribution.length);
+            
+            if(backupError > staticError) {
+                m_Attribute = null;
+                m_Label = maxIndex(m_ClassDistribution);
+                m_Children = null;
+                m_IsLeaf = true;
+            }
         }
-    }
-    
-    /**
-     * Convert Tree to List of Rule
-     */
-    private void convertToRule() {
-        
     }
     
     /**
@@ -669,7 +623,6 @@ public class MyJ48 extends Classifier {
                 text.append(": null");
             } else {
                 text.append(": ").append(m_ClassAttribute.value((int) m_Label));
-                text.append(" ").append(m_NumInstances);
             }
         } else {
             for (int j = 0; j < m_Attribute.numValues(); j++) {
@@ -685,18 +638,18 @@ public class MyJ48 extends Classifier {
     }
     
     public double staticErrorEstimate(int N, int n, int k) {
-        double E = (N - n + k - 1) / (N + k);
+        double E = (N - n + k - 1) / (double) (N + k);
         
         return E;
     }
     
     public double backUpError() {
         double E = 0;
-        int totalInstances = (int) DoubleStream.of(m_ClassDistribution).sum();
+        double totalInstances = DoubleStream.of(m_ClassDistribution).sum();
         for (MyJ48 child : m_Children) {
-            int totalChildInstances = (int) DoubleStream.of(child.m_ClassDistribution).sum();
+            double totalChildInstances = DoubleStream.of(child.m_ClassDistribution).sum();
             E += totalChildInstances/totalInstances
-                * staticErrorEstimate(totalChildInstances, (int) child.m_ClassDistribution[(int) child.m_Label], m_Children.length);
+                * staticErrorEstimate((int) totalChildInstances, (int) child.m_ClassDistribution[(int) child.m_Label], child.m_ClassDistribution.length);
         }
         
         return E;

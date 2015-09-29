@@ -125,7 +125,7 @@ public class Helper {
                     return myid3;
                 case "j48":
                     J48 j48 = new J48();
-                    j48.setOptions(new String[]{"-U"});
+                    //j48.setOptions(new String[]{"-U"});
                     j48.buildClassifier(data);
 
                     return j48;

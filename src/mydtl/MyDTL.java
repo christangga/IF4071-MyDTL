@@ -5,8 +5,8 @@ import weka.core.Instances;
 
 public class MyDTL {
 
-    private static final String DATA_SOURCE = "data/weather.nominal.arff";
-    private static final String DATA_SOURCE_UNLABELED = "data/weather.nominal.unlabeled.arff";
+    private static final String DATA_SOURCE = "data/iris.arff";
+    private static final String DATA_SOURCE_UNLABELED = "data/iris.unlabeled.arff";
 
     public static void main(String[] args) {
 
