@@ -12,7 +12,6 @@ import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Instance;
 import weka.core.Instances;
-import weka.core.NoSupportForMissingValuesException;
 
 public class NewJ48 extends Classifier {
 
@@ -61,16 +60,18 @@ public class NewJ48 extends Classifier {
      */
     @Override
     public Capabilities getCapabilities() {
+
         Capabilities result = super.getCapabilities();
         result.disableAll();
 
         // attributes
+        result.enable(Capabilities.Capability.MISSING_VALUES);
         result.enable(Capabilities.Capability.NOMINAL_ATTRIBUTES);
         result.enable(Capabilities.Capability.NUMERIC_ATTRIBUTES);
 
         // class
-        result.enable(Capabilities.Capability.NOMINAL_CLASS);
         result.enable(Capabilities.Capability.MISSING_CLASS_VALUES);
+        result.enable(Capabilities.Capability.NOMINAL_CLASS);
 
         // instances
         result.setMinimumNumberInstances(0);
@@ -143,9 +144,24 @@ public class NewJ48 extends Classifier {
                 classAttribute = data.classAttribute();
                 isLeaf = true;
             } else {
+                // Mengecek jika ada missing value
+                if (isMissing(data, splitAttribute)) {
+                    // cari modus
+                    int index = modusIndex(data, splitAttribute);
+
+                    // ubah data yang punya missing value
+                    Enumeration dataEnum = data.enumerateInstances();
+                    while (dataEnum.hasMoreElements()) {
+                        Instance inst = (Instance) dataEnum.nextElement();
+                        if (inst.isMissing(splitAttribute)) {
+                            inst.setValue(splitAttribute, splitAttribute.value(index));
+                        }
+                    }
+                }
+
                 // Membuat tree baru di bawah node ini
                 Instances[] splitData;
-                if (splitThreshold != DOUBLE_MISSING_VALUE) {
+                if (splitThreshold > 0) {
                     splitData = splitData(data, splitAttribute, splitThreshold);
                     children = new NewJ48[2];
                     for (int j = 0; j < 2; j++) {
@@ -170,8 +186,56 @@ public class NewJ48 extends Classifier {
      *
      * @param data the training data
      */
-    public void pruneTree(Instances data) {
+    private void pruneTree(Instances data) throws Exception {
 
+        if (!isLeaf) {
+            // Prune all subtrees.
+            for (NewJ48 children1 : children) {
+                children1.pruneTree(data);
+            }
+
+            // Cari nilai Backup error dari node tersebut 
+            double backupError = backUpError();
+            double staticError = staticErrorEstimate((int) DoubleStream.of(classDistributions).sum(),
+                (int) classDistributions[maxIndex(classDistributions)], classDistributions.length);
+
+            if (backupError > staticError) {
+                splitAttribute = null;
+                label = maxIndex(classDistributions);
+                children = null;
+                isLeaf = true;
+            }
+        }
+    }
+
+    private double expectedErrorPruning(Instances data) throws Exception {
+
+        double staticError = staticErrorEstimate((int) DoubleStream.of(classDistributions).sum(),
+            (int) classDistributions[maxIndex(classDistributions)], classDistributions.length);
+
+        if (isLeaf) {
+            return staticError;
+        } else {
+            double backupError = 0;
+            double totalInstances = DoubleStream.of(classDistributions).sum();
+
+            for (NewJ48 children1 : children) {
+                double totalChildInstances = DoubleStream.of(children1.classDistributions).sum();
+                backupError += totalChildInstances / totalInstances * children1.expectedErrorPruning(data);
+            }
+            System.out.println("backup error: " + backupError);
+
+            if (staticError < backupError) {
+                splitAttribute = null;
+                label = maxIndex(classDistributions);
+                children = null;
+                isLeaf = true;
+
+                return staticError;
+            } else {
+                return backupError;
+            }
+        }
     }
 
     /**
@@ -179,19 +243,14 @@ public class NewJ48 extends Classifier {
      *
      * @param instance the instance to be classified
      * @return the classification
-     * @throws NoSupportForMissingValuesException if instance has missing values
      */
     @Override
-    public double classifyInstance(Instance instance)
-        throws NoSupportForMissingValuesException {
+    public double classifyInstance(Instance instance) {
 
-        if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("NewJ48: Cannot handle missing values");
-        }
         if (splitAttribute == null) {
             return label;
         } else {
-            if (splitThreshold != DOUBLE_MISSING_VALUE) {
+            if (splitThreshold > 0) {
                 if (instance.value(splitAttribute) <= splitThreshold) {
                     return children[0].classifyInstance(instance);
                 } else {
@@ -209,20 +268,23 @@ public class NewJ48 extends Classifier {
      *
      * @param instance the instance for which distribution is to be computed
      * @return the class distribution for the given instance
-     * @throws NoSupportForMissingValuesException if instance has missing values
      */
     @Override
-    public double[] distributionForInstance(Instance instance)
-        throws NoSupportForMissingValuesException {
+    public double[] distributionForInstance(Instance instance) {
 
-        if (instance.hasMissingValue()) {
-            throw new NoSupportForMissingValuesException("NewJ48: Cannot handle missing values");
-        }
         if (splitAttribute == null) {
             return classDistributions;
         } else {
-            return children[(int) instance.value(splitAttribute)].
-                distributionForInstance(instance);
+            if (splitThreshold > 0) {
+                if (instance.value(splitAttribute) <= splitThreshold) {
+                    return children[0].distributionForInstance(instance);
+                } else {
+                    return children[1].distributionForInstance(instance);
+                }
+            } else {
+                return children[(int) instance.value(splitAttribute)].
+                    distributionForInstance(instance);
+            }
         }
     }
 
@@ -305,13 +367,13 @@ public class NewJ48 extends Classifier {
             if (threshold.length > 0) {
                 return new double[]{gainRatios[maxIndex(gainRatios)], threshold[maxIndex(gainRatios)]};
             } else {
-                return new double[]{0, DOUBLE_MISSING_VALUE};
+                return new double[]{0, 0};
             }
         } else {
             double infoGain = computeInfoGain(data, att);
             double splitInfo = computeSplitInformation(data, att);
 
-            return new double[]{infoGain > 0 ? infoGain / splitInfo : infoGain, DOUBLE_MISSING_VALUE};
+            return new double[]{splitInfo > 0 ? infoGain / splitInfo : splitInfo, 0};
         }
     }
 
@@ -437,12 +499,14 @@ public class NewJ48 extends Classifier {
     }
 
     public double staticErrorEstimate(int N, int n, int k) {
+        
         double E = (N - n + k - 1) / (double) (N + k);
 
         return E;
     }
 
     public double backUpError() {
+        
         double E = 0;
         double totalInstances = DoubleStream.of(classDistributions).sum();
         for (NewJ48 child : children) {
@@ -456,13 +520,68 @@ public class NewJ48 extends Classifier {
     }
 
     /**
+     * search data that has missing value for attribute
+     *
+     * @param data the data for searching
+     * @param att the attribute for searching
+     * @return if data has missing value for attribute
+     */
+    private boolean isMissing(Instances data, Attribute att) {
+        
+        boolean isMissingValue = false;
+        Enumeration dataEnum = data.enumerateInstances();
+
+        while (dataEnum.hasMoreElements() && !isMissingValue) {
+            Instance inst = (Instance) dataEnum.nextElement();
+            if (inst.isMissing(att)) {
+                isMissingValue = true;
+            }
+        }
+
+        return isMissingValue;
+    }
+
+    /**
+     * search index of attribute that has most common value
+     *
+     * @param data the data for searching
+     * @param att the attribute for searching
+     * @return index of attribute that has most common value
+     */
+    private int modusIndex(Instances data, Attribute att) {
+        
+        // cari modus
+        int[] modus = new int[att.numValues()];
+        Enumeration dataEnumeration = data.enumerateInstances();
+
+        while (dataEnumeration.hasMoreElements()) {
+            Instance inst = (Instance) dataEnumeration.nextElement();
+            if (!inst.isMissing(att)) {
+                modus[(int) inst.value(att)]++;
+            }
+        }
+
+        // cari modus terbesar
+        int max = 0;
+        int index = -1;
+        for (int i = 0; i < modus.length; ++i) {
+            if (modus[i] > max) {
+                max = modus[i];
+                index = i;
+            }
+        }
+
+        return index;
+    }
+
+    /**
      * Prints the decision tree using the private toString method from below.
      *
      * @return a textual description of the classifier
      */
     @Override
     public String toString() {
-
+        
         if ((classDistributions == null) && (children == null)) {
             return "NewJ48: No model built yet.";
         }
@@ -476,7 +595,7 @@ public class NewJ48 extends Classifier {
      * @return the tree as string at the given level
      */
     private String toString(int level) {
-
+        
         StringBuilder text = new StringBuilder();
 
         if (splitAttribute == null) {
@@ -524,6 +643,7 @@ public class NewJ48 extends Classifier {
      * @return true if the values are the same, false if not
      */
     private boolean doubleEqual(double d1, double d2) {
+        
         return (d1 == d2) || Math.abs(d1 - d2) < DOUBLE_ERROR_MAXIMUM;
     }
 
@@ -534,6 +654,7 @@ public class NewJ48 extends Classifier {
      * @return logarithm value with base 2
      */
     private double log2(double num) {
+        
         return (num == 0) ? 0 : Math.log(num) / Math.log(2);
     }
 
@@ -544,6 +665,7 @@ public class NewJ48 extends Classifier {
      * @return index of array with maximum value
      */
     private int maxIndex(double[] array) {
+        
         double max = 0;
         int index = 0;
 
@@ -566,6 +688,7 @@ public class NewJ48 extends Classifier {
      * @param array the array of double
      */
     private void normalizeDouble(double[] array) {
+        
         double sum = 0;
         for (double d : array) {
             sum += d;
