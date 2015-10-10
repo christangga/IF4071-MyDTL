@@ -39,7 +39,7 @@ public class NewJ48 extends Classifier {
     private double label;
 
     /**
-     * Class distribution if node is leaf.
+     * Class distribution.
      */
     private double[] classDistributions;
 
@@ -96,7 +96,7 @@ public class NewJ48 extends Classifier {
         data.deleteWithMissingClass();
 
         makeTree(data);
-        // pruneTree(data);
+        pruneTree(data);
     }
 
     /**
@@ -129,17 +129,17 @@ public class NewJ48 extends Classifier {
             splitAttribute = data.attribute(maxIndex(gainRatios));
             splitThreshold = thresholds[maxIndex(gainRatios)];
 
+            classDistributions = new double[data.numClasses()];
+            for (int i = 0; i < data.numInstances(); i++) {
+                Instance inst = (Instance) data.instance(i);
+                classDistributions[(int) inst.classValue()]++;
+            }
+
             // Membuat daun jika Gain Ratio-nya 0
             if (doubleEqual(gainRatios[splitAttribute.index()], 0)) {
                 splitAttribute = null;
 
-                classDistributions = new double[data.numClasses()];
-                for (int i = 0; i < data.numInstances(); i++) {
-                    Instance inst = (Instance) data.instance(i);
-                    classDistributions[(int) inst.classValue()]++;
-                }
-
-                normalizeDouble(classDistributions);
+                // normalizeDouble(classDistributions);
                 label = maxIndex(classDistributions);
                 classAttribute = data.classAttribute();
                 isLeaf = true;
@@ -182,33 +182,11 @@ public class NewJ48 extends Classifier {
     }
 
     /**
-     * Creates a pruned J48 tree.
+     * Creates a pruned J48 tree using expected error pruning.
      *
      * @param data the training data
      */
-    private void pruneTree(Instances data) throws Exception {
-
-        if (!isLeaf) {
-            // Prune all subtrees.
-            for (NewJ48 children1 : children) {
-                children1.pruneTree(data);
-            }
-
-            // Cari nilai Backup error dari node tersebut 
-            double backupError = backUpError();
-            double staticError = staticErrorEstimate((int) DoubleStream.of(classDistributions).sum(),
-                (int) classDistributions[maxIndex(classDistributions)], classDistributions.length);
-
-            if (backupError > staticError) {
-                splitAttribute = null;
-                label = maxIndex(classDistributions);
-                children = null;
-                isLeaf = true;
-            }
-        }
-    }
-
-    private double expectedErrorPruning(Instances data) throws Exception {
+    private double pruneTree(Instances data) throws Exception {
 
         double staticError = staticErrorEstimate((int) DoubleStream.of(classDistributions).sum(),
             (int) classDistributions[maxIndex(classDistributions)], classDistributions.length);
@@ -221,15 +199,15 @@ public class NewJ48 extends Classifier {
 
             for (NewJ48 children1 : children) {
                 double totalChildInstances = DoubleStream.of(children1.classDistributions).sum();
-                backupError += totalChildInstances / totalInstances * children1.expectedErrorPruning(data);
+                backupError += totalChildInstances / totalInstances * children1.pruneTree(data);
             }
-            System.out.println("backup error: " + backupError);
 
             if (staticError < backupError) {
                 splitAttribute = null;
                 label = maxIndex(classDistributions);
-                children = null;
+                classAttribute = data.classAttribute();
                 isLeaf = true;
+                children = null;
 
                 return staticError;
             } else {
@@ -499,14 +477,14 @@ public class NewJ48 extends Classifier {
     }
 
     public double staticErrorEstimate(int N, int n, int k) {
-        
+
         double E = (N - n + k - 1) / (double) (N + k);
 
         return E;
     }
 
     public double backUpError() {
-        
+
         double E = 0;
         double totalInstances = DoubleStream.of(classDistributions).sum();
         for (NewJ48 child : children) {
@@ -527,7 +505,7 @@ public class NewJ48 extends Classifier {
      * @return if data has missing value for attribute
      */
     private boolean isMissing(Instances data, Attribute att) {
-        
+
         boolean isMissingValue = false;
         Enumeration dataEnum = data.enumerateInstances();
 
@@ -549,7 +527,7 @@ public class NewJ48 extends Classifier {
      * @return index of attribute that has most common value
      */
     private int modusIndex(Instances data, Attribute att) {
-        
+
         // cari modus
         int[] modus = new int[att.numValues()];
         Enumeration dataEnumeration = data.enumerateInstances();
@@ -581,11 +559,11 @@ public class NewJ48 extends Classifier {
      */
     @Override
     public String toString() {
-        
+
         if ((classDistributions == null) && (children == null)) {
             return "NewJ48: No model built yet.";
         }
-        return "NewJ48\n\n" + toString(0);
+        return "NewJ48 pruned tree\n------------------\n" + toString(0);
     }
 
     /**
@@ -595,7 +573,7 @@ public class NewJ48 extends Classifier {
      * @return the tree as string at the given level
      */
     private String toString(int level) {
-        
+
         StringBuilder text = new StringBuilder();
 
         if (splitAttribute == null) {
@@ -603,9 +581,19 @@ public class NewJ48 extends Classifier {
                 text.append(": null");
             } else {
                 text.append(": ").append(classAttribute.value((int) label));
-//                for (int i = 0; i < classDistributions.length; i++) {
-//                    text.append(" ").append(classDistributions[i]);
-//                }
+
+                double totalInstances = 0;
+                for (int i = 0; i < classDistributions.length; i++) {
+                    totalInstances += classDistributions[i];
+                }
+                text.append(" (").append(totalInstances);
+
+                double wrongClass = totalInstances - classDistributions[(int) label];
+                if (wrongClass > 0) {
+                    text.append("/").append(totalInstances - classDistributions[(int) label]);
+                }
+
+                text.append(")");
             }
         } else {
             if (splitAttribute.isNumeric()) {
@@ -632,6 +620,7 @@ public class NewJ48 extends Classifier {
                 }
             }
         }
+        
         return text.toString();
     }
 
@@ -643,7 +632,7 @@ public class NewJ48 extends Classifier {
      * @return true if the values are the same, false if not
      */
     private boolean doubleEqual(double d1, double d2) {
-        
+
         return (d1 == d2) || Math.abs(d1 - d2) < DOUBLE_ERROR_MAXIMUM;
     }
 
@@ -654,7 +643,7 @@ public class NewJ48 extends Classifier {
      * @return logarithm value with base 2
      */
     private double log2(double num) {
-        
+
         return (num == 0) ? 0 : Math.log(num) / Math.log(2);
     }
 
@@ -665,7 +654,7 @@ public class NewJ48 extends Classifier {
      * @return index of array with maximum value
      */
     private int maxIndex(double[] array) {
-        
+
         double max = 0;
         int index = 0;
 
@@ -688,7 +677,7 @@ public class NewJ48 extends Classifier {
      * @param array the array of double
      */
     private void normalizeDouble(double[] array) {
-        
+
         double sum = 0;
         for (double d : array) {
             sum += d;
