@@ -267,11 +267,11 @@ public class NewJ48 extends Classifier {
     }
 
     /**
-     * split the dataset based on attribute
+     * split the dataset based on nominal attribute 
      *
      * @param data dataset used for splitting
      * @param att attribute used to split the dataset
-     * @return
+     * @return array of instances which has been split by attribute
      */
     private Instances[] splitData(Instances data, Attribute att) {
 
@@ -651,21 +651,18 @@ public class NewJ48 extends Classifier {
      * Search for index with largest value from array of double
      *
      * @param array the array of double
-     * @return index of array with maximum value
+     * @return index of array with maximum value, -1 if array empty
      */
     private int maxIndex(double[] array) {
-
-        double max = 0;
-        int index = 0;
-
+        int max = 0;
+        
         if (array.length > 0) {
-            for (int i = 0; i < array.length; ++i) {
-                if (array[i] > max) {
-                    max = array[i];
-                    index = i;
+            for (int i = 1; i < array.length; ++i) {
+                if (array[i] > array[max]) {
+                    max = i;
                 }
             }
-            return index;
+            return max;
         } else {
             return -1;
         }

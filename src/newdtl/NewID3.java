@@ -6,6 +6,7 @@
 package newdtl;
 
 import java.util.Enumeration;
+import java.util.stream.DoubleStream;
 import weka.classifiers.Classifier;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -17,7 +18,6 @@ import weka.core.NoSupportForMissingValuesException;
 public class NewID3 extends Classifier {
 
     private final double DOUBLE_MISSING_VALUE = Double.NaN;
-    private final double DOUBLE_ERROR_MAXIMUM = 1e-6;
 
     /**
      * The node's children.
@@ -98,7 +98,7 @@ public class NewID3 extends Classifier {
         if (data.numInstances() == 0) {
             splitAttribute = null;
             label = DOUBLE_MISSING_VALUE;
-            classDistributions = new double[data.numClasses()];
+            classDistributions = new double[data.numClasses()]; //???
         } else {
             // Mencari IG maksimum
             double[] infoGains = new double[data.numAttributes()];
@@ -108,20 +108,30 @@ public class NewID3 extends Classifier {
                 Attribute att = (Attribute) attEnum.nextElement();
                 infoGains[att.index()] = computeInfoGain(data, att);
             }
-
-            splitAttribute = data.attribute(maxIndex(infoGains));
+            
+            // cek max IG
+            int maxIG = maxIndex(infoGains);
+            if (maxIG != -1) {
+                 splitAttribute = data.attribute(maxIndex(infoGains));
+            } else {
+                Exception exception = new Exception("array null");
+                throw exception;
+            }
+           
 
             // Membuat daun jika IG-nya 0
-            if (doubleEqual(infoGains[splitAttribute.index()], 0)) {
+            if (Double.compare(infoGains[splitAttribute.index()], 0) == 0) {
                 splitAttribute = null;
-
+                
+                
                 classDistributions = new double[data.numClasses()];
                 for (int i = 0; i < data.numInstances(); i++) {
                     Instance inst = (Instance) data.instance(i);
                     classDistributions[(int) inst.classValue()]++;
                 }
 
-                normalizeDouble(classDistributions);
+                normalizeClassDistribution();
+                
                 label = maxIndex(classDistributions);
                 classAttribute = data.classAttribute();
             } else {
@@ -137,54 +147,39 @@ public class NewID3 extends Classifier {
     }
 
     /**
-     * Normalize the values in array of double
-     *
-     * @param array the array of double
+     * Normalize the class distribution
+     * @exception Exception if sum of class distribution is 0 or NAN
      */
-    private void normalizeDouble(double[] array) {
-        double sum = 0;
-        for (double d : array) {
-            sum += d;
-        }
+    private void normalizeClassDistribution() throws Exception {
+        double sum = DoubleStream.of(classDistributions).sum();
 
         if (!Double.isNaN(sum) && sum != 0) {
-            for (int i = 0; i < array.length; ++i) {
-                array[i] /= sum;
+            for (int i = 0; i < classDistributions.length; ++i) {
+                classDistributions[i] /= sum;
             }
         } else {
-            // Do nothing
+            Exception exception = new Exception("Class distribution: sum = 0 or NAN");
+            throw exception;
         }
     }
 
-    /**
-     * Check whether two double values are the same
-     *
-     * @param d1 the first double value
-     * @param d2 the second double value
-     * @return true if the values are the same, false if not
-     */
-    private boolean doubleEqual(double d1, double d2) {
-        return (d1 == d2) || Math.abs(d1 - d2) < DOUBLE_ERROR_MAXIMUM;
-    }
 
     /**
      * Search for index with largest value from array of double
      *
      * @param array the array of double
-     * @return index of array with maximum value
+     * @return index of array with maximum value, -1 if array empty
      */
     private static int maxIndex(double[] array) {
-        double max = 0;
-        int index = 0;
-
+        int max = 0;
+        
         if (array.length > 0) {
-            for (int i = 0; i < array.length; ++i) {
-                if (array[i] > max) {
-                    max = array[i];
-                    index = i;
+            for (int i = 1; i < array.length; ++i) {
+                if (array[i] > array[max]) {
+                    max = i;
                 }
             }
-            return index;
+            return max;
         } else {
             return -1;
         }
@@ -220,7 +215,7 @@ public class NewID3 extends Classifier {
      * @throws NoSupportForMissingValuesException if instance has missing values
      */
     @Override
-    public double[] distributionForInstance(Instance instance)
+    public double[] distributionForInstance(Instance instance) // ga tau buat apa, ga dipanggil sama skali
         throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
@@ -254,10 +249,8 @@ public class NewID3 extends Classifier {
      * @param data the data for which info gain is to be computed
      * @param att the attribute
      * @return the information gain for the given attribute and data
-     * @throws Exception if computation fails
      */
-    private static double computeInfoGain(Instances data, Attribute att)
-        throws Exception {
+    private static double computeInfoGain(Instances data, Attribute att) {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);
@@ -277,9 +270,8 @@ public class NewID3 extends Classifier {
      *
      * @param data the data for which entropy is to be computed
      * @return the entropy of the data class distribution
-     * @throws Exception if computation fails
      */
-    private static double computeEntropy(Instances data) throws Exception {
+    private static double computeEntropy(Instances data) {
 
         double[] labelCounts = new double[data.numClasses()];
         for (int i = 0; i < data.numInstances(); ++i) {
@@ -307,11 +299,11 @@ public class NewID3 extends Classifier {
     }
 
     /**
-     * split the dataset based on attribute
+     * split the dataset based on nominal attribute
      *
      * @param data dataset used for splitting
      * @param att attribute used to split the dataset
-     * @return
+     * @return array of instances which has been split by attribute
      */
     private static Instances[] splitData(Instances data, Attribute att) {
 
