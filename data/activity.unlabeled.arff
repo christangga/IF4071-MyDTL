@@ -7,3 +7,12 @@
 
 @data
 urgent,ya,ya,?
+urgent,tidak,ya,?
+dekat,ya,ya,?
+tidak_ada,ya,tidak,?
+tidak_ada,tidak,ya,?
+tidak_ada,ya,tidak,?
+dekat,tidak,tidak,?
+dekat,tidak,ya,?
+dekat,ya,ya,?
+urgent,tidak,tidak,?

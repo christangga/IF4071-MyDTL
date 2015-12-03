@@ -7,4 +7,17 @@
 @attribute play {yes, no}
 
 @data
-?, cool,normal,TRUE,?
+sunny,hot,high,FALSE,?
+sunny,hot,high,TRUE,?
+overcast,hot,high,FALSE,?
+rainy,mild,high,FALSE,?
+rainy,cool,normal,FALSE,?
+rainy,cool,normal,TRUE,?
+overcast,cool,normal,TRUE,?
+sunny,mild,high,FALSE,?
+sunny,cool,normal,FALSE,?
+rainy,mild,normal,FALSE,?
+sunny,mild,normal,TRUE,?
+overcast,mild,high,TRUE,?
+overcast,hot,normal,FALSE,?
+rainy,mild,high,TRUE,?
