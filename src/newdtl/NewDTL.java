@@ -8,8 +8,10 @@ public class NewDTL {
 
     public static void main(String[] args) {
         Scanner scn = new Scanner(System.in);
+        System.out.print("Masukkan tipe algoritma (id3, new1d3, j48, newj48): ");
         String input = scn.next();
         while (!input.equals("exit")) {
+            System.out.print("Masukkan data set: ");
             String source = scn.next();
             String dataSource = "data/" + source + ".arff";
             String dataSourceUnlabeled = "data/" + source + ".unlabeled.arff";
@@ -43,6 +45,7 @@ public class NewDTL {
             }
 
             System.out.println("=================================================");
+            System.out.print("Masukkan tipe algoritma (id3, new1d3, j48, newj48): ");
             input = scn.next();
         }
     }
