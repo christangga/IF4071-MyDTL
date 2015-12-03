@@ -108,22 +108,20 @@ public class NewID3 extends Classifier {
                 Attribute att = (Attribute) attEnum.nextElement();
                 infoGains[att.index()] = computeInfoGain(data, att);
             }
-            
+
             // cek max IG
             int maxIG = maxIndex(infoGains);
             if (maxIG != -1) {
-                 splitAttribute = data.attribute(maxIndex(infoGains));
+                splitAttribute = data.attribute(maxIndex(infoGains));
             } else {
                 Exception exception = new Exception("array null");
                 throw exception;
             }
-           
 
             // Membuat daun jika IG-nya 0
             if (Double.compare(infoGains[splitAttribute.index()], 0) == 0) {
                 splitAttribute = null;
-                
-                
+
                 classDistributions = new double[data.numClasses()];
                 for (int i = 0; i < data.numInstances(); i++) {
                     Instance inst = (Instance) data.instance(i);
@@ -131,7 +129,6 @@ public class NewID3 extends Classifier {
                 }
 
                 normalizeClassDistribution();
-                
                 label = maxIndex(classDistributions);
                 classAttribute = data.classAttribute();
             } else {
@@ -148,6 +145,7 @@ public class NewID3 extends Classifier {
 
     /**
      * Normalize the class distribution
+     *
      * @exception Exception if sum of class distribution is 0 or NAN
      */
     private void normalizeClassDistribution() throws Exception {
@@ -163,7 +161,6 @@ public class NewID3 extends Classifier {
         }
     }
 
-
     /**
      * Search for index with largest value from array of double
      *
@@ -172,7 +169,7 @@ public class NewID3 extends Classifier {
      */
     private static int maxIndex(double[] array) {
         int max = 0;
-        
+
         if (array.length > 0) {
             for (int i = 1; i < array.length; ++i) {
                 if (array[i] > array[max]) {
@@ -194,7 +191,7 @@ public class NewID3 extends Classifier {
      */
     @Override
     public double classifyInstance(Instance instance)
-        throws NoSupportForMissingValuesException {
+            throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("NewID3: Cannot handle missing values");
@@ -203,7 +200,7 @@ public class NewID3 extends Classifier {
             return label;
         } else {
             return children[(int) instance.value(splitAttribute)].
-                classifyInstance(instance);
+                    classifyInstance(instance);
         }
     }
 
@@ -215,8 +212,8 @@ public class NewID3 extends Classifier {
      * @throws NoSupportForMissingValuesException if instance has missing values
      */
     @Override
-    public double[] distributionForInstance(Instance instance) // ga tau buat apa, ga dipanggil sama skali
-        throws NoSupportForMissingValuesException {
+    public double[] distributionForInstance(Instance instance) 
+            throws NoSupportForMissingValuesException {
 
         if (instance.hasMissingValue()) {
             throw new NoSupportForMissingValuesException("NewID3: Cannot handle missing values");
@@ -225,7 +222,7 @@ public class NewID3 extends Classifier {
             return classDistributions;
         } else {
             return children[(int) instance.value(splitAttribute)].
-                distributionForInstance(instance);
+                    distributionForInstance(instance);
         }
     }
 
@@ -250,7 +247,7 @@ public class NewID3 extends Classifier {
      * @param att the attribute
      * @return the information gain for the given attribute and data
      */
-    private static double computeInfoGain(Instances data, Attribute att) {
+    private double computeInfoGain(Instances data, Attribute att) {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);
@@ -305,7 +302,7 @@ public class NewID3 extends Classifier {
      * @param att attribute used to split the dataset
      * @return array of instances which has been split by attribute
      */
-    private static Instances[] splitData(Instances data, Attribute att) {
+    private Instances[] splitData(Instances data, Attribute att) {
 
         Instances[] splitData = new Instances[att.numValues()];
         for (int j = 0; j < att.numValues(); j++) {

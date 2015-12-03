@@ -5,6 +5,7 @@
  */
 package newdtl;
 
+import static java.lang.System.exit;
 import java.util.Enumeration;
 import java.util.stream.DoubleStream;
 import weka.classifiers.Classifier;
@@ -12,6 +13,7 @@ import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.NoSupportForMissingValuesException;
 
 public class NewJ48 extends Classifier {
 
@@ -96,6 +98,7 @@ public class NewJ48 extends Classifier {
         data.deleteWithMissingClass();
 
         makeTree(data);
+        
         pruneTree(data);
     }
 
@@ -127,8 +130,13 @@ public class NewJ48 extends Classifier {
             }
 
             splitAttribute = data.attribute(maxIndex(gainRatios));
-            splitThreshold = thresholds[maxIndex(gainRatios)];
-
+            
+            if (splitAttribute.isNumeric()) {
+                splitThreshold = thresholds[maxIndex(gainRatios)];
+            } else {
+                splitThreshold = Double.NaN;
+            }
+            
             classDistributions = new double[data.numClasses()];
             for (int i = 0; i < data.numInstances(); i++) {
                 Instance inst = (Instance) data.instance(i);
@@ -136,10 +144,9 @@ public class NewJ48 extends Classifier {
             }
 
             // Membuat daun jika Gain Ratio-nya 0
-            if (doubleEqual(gainRatios[splitAttribute.index()], 0)) {
+            if (Double.compare(gainRatios[splitAttribute.index()], 0) == 0) {
                 splitAttribute = null;
 
-                // normalizeDouble(classDistributions);
                 label = maxIndex(classDistributions);
                 classAttribute = data.classAttribute();
                 isLeaf = true;
@@ -161,7 +168,7 @@ public class NewJ48 extends Classifier {
 
                 // Membuat tree baru di bawah node ini
                 Instances[] splitData;
-                if (splitThreshold > 0) {
+                if (splitAttribute.isNumeric()) {
                     splitData = splitData(data, splitAttribute, splitThreshold);
                     children = new NewJ48[2];
                     for (int j = 0; j < 2; j++) {
@@ -223,13 +230,16 @@ public class NewJ48 extends Classifier {
      * @return the classification
      */
     @Override
-    public double classifyInstance(Instance instance) {
-
+    public double classifyInstance(Instance instance) throws NoSupportForMissingValuesException {
+        if (instance.hasMissingValue()) {
+            throw new NoSupportForMissingValuesException("NewID3: Cannot handle missing values");
+        }
+        
         if (splitAttribute == null) {
             return label;
         } else {
-            if (splitThreshold > 0) {
-                if (instance.value(splitAttribute) <= splitThreshold) {
+            if (splitAttribute.isNumeric()) {
+                if (Double.compare(instance.value(splitAttribute), splitThreshold) <= 0) {
                     return children[0].classifyInstance(instance);
                 } else {
                     return children[1].classifyInstance(instance);
@@ -248,13 +258,17 @@ public class NewJ48 extends Classifier {
      * @return the class distribution for the given instance
      */
     @Override
-    public double[] distributionForInstance(Instance instance) {
-
+    public double[] distributionForInstance(Instance instance) 
+            throws NoSupportForMissingValuesException {
+        if (instance.hasMissingValue()) {
+            throw new NoSupportForMissingValuesException("NewID3: Cannot handle missing values");
+        }
+        
         if (splitAttribute == null) {
-            return classDistributions;
+            return normalize(classDistributions);
         } else {
-            if (splitThreshold > 0) {
-                if (instance.value(splitAttribute) <= splitThreshold) {
+            if (splitAttribute.isNumeric()) {
+                if (Double.compare(instance.value(splitAttribute), splitThreshold) <= 0) {
                     return children[0].distributionForInstance(instance);
                 } else {
                     return children[1].distributionForInstance(instance);
@@ -307,7 +321,7 @@ public class NewJ48 extends Classifier {
         }
 
         for (int i = 0; i < data.numInstances(); i++) {
-            if (data.instance(i).value(att) <= threshold) {
+            if (Double.compare(data.instance(i).value(att), threshold) <= 0) {
                 splitData[0].add(data.instance(i));
             } else {
                 splitData[1].add(data.instance(i));
@@ -329,24 +343,31 @@ public class NewJ48 extends Classifier {
      * @return the gain ratio for the given attribute and data
      * @throws Exception if computation fails
      */
-    private double[] computeGainRatio(Instances data, Attribute att)
-        throws Exception {
-
+    private double[] computeGainRatio(Instances data, Attribute att) {     
         if (att.isNumeric()) {
             data.sort(att);
-            double[] threshold = new double[data.numInstances() - 1];
-            double[] gainRatios = new double[data.numInstances() - 1];
-            for (int i = 0; i < data.numInstances() - 1; i++) {
-                threshold[i] = data.instance(i).value(att);
-                double infoGain = computeInfoGain(data, att, threshold[i]);
-                double splitInfo = computeSplitInformation(data, att, threshold[i]);
-                gainRatios[i] = infoGain > 0 ? infoGain / splitInfo : infoGain;
-            }
-            if (threshold.length > 0) {
-                return new double[]{gainRatios[maxIndex(gainRatios)], threshold[maxIndex(gainRatios)]};
+            double[] threshold;
+            double[] gainRatios;
+            
+            if (data.numInstances() == 1) {
+                threshold = new double[1];
+                gainRatios = new double[1];
+                
+                threshold[0] = data.instance(0).value(att);
+                double infoGain = computeInfoGain(data, att, threshold[0]);
+                double splitInfo = computeSplitInformation(data, att, threshold[0]);
+                gainRatios[0] = infoGain > 0 ? infoGain / splitInfo : infoGain;
             } else {
-                return new double[]{0, 0};
+                threshold = new double[data.numInstances() - 1];
+                gainRatios = new double[data.numInstances() - 1];
+                for (int i = 0; i < data.numInstances() - 1; i++) {
+                    threshold[i] = data.instance(i).value(att);
+                    double infoGain = computeInfoGain(data, att, threshold[i]);
+                    double splitInfo = computeSplitInformation(data, att, threshold[i]);
+                    gainRatios[i] = infoGain > 0 ? infoGain / splitInfo : infoGain;
+                }
             }
+            return new double[]{gainRatios[maxIndex(gainRatios)], threshold[maxIndex(gainRatios)]};
         } else {
             double infoGain = computeInfoGain(data, att);
             double splitInfo = computeSplitInformation(data, att);
@@ -363,8 +384,7 @@ public class NewJ48 extends Classifier {
      * @return the information gain for the given attribute and data
      * @throws Exception if computation fails
      */
-    private double computeInfoGain(Instances data, Attribute att)
-        throws Exception {
+    private double computeInfoGain(Instances data, Attribute att) {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att);
@@ -387,8 +407,7 @@ public class NewJ48 extends Classifier {
      * @return the information gain for the given attribute and data
      * @throws Exception if computation fails
      */
-    private double computeInfoGain(Instances data, Attribute att, double threshold)
-        throws Exception {
+    private double computeInfoGain(Instances data, Attribute att, double threshold) {
 
         double infoGain = computeEntropy(data);
         Instances[] splitData = splitData(data, att, threshold);
@@ -400,7 +419,6 @@ public class NewJ48 extends Classifier {
                 infoGain -= proportion * computeEntropy(splitdata);
             }
         }
-
         return infoGain;
     }
 
@@ -411,7 +429,7 @@ public class NewJ48 extends Classifier {
      * @return the entropy of the data class distribution
      * @throws Exception if computation fails
      */
-    private double computeEntropy(Instances data) throws Exception {
+    private double computeEntropy(Instances data) {
 
         double[] labelCounts = new double[data.numClasses()];
         for (int i = 0; i < data.numInstances(); ++i) {
@@ -436,7 +454,7 @@ public class NewJ48 extends Classifier {
      * @return the split information for the given attribute and data
      * @throws Exception if computation fails
      */
-    private double computeSplitInformation(Instances data, Attribute att) throws Exception {
+    private double computeSplitInformation(Instances data, Attribute att) {
 
         double splitInfo = 0;
         Instances[] splitData = splitData(data, att);
@@ -460,7 +478,7 @@ public class NewJ48 extends Classifier {
      * @return the split information for the given attribute and data
      * @throws Exception if computation fails
      */
-    private double computeSplitInformation(Instances data, Attribute att, double threshold) throws Exception {
+    private double computeSplitInformation(Instances data, Attribute att, double threshold) {
 
         double splitInfo = 0;
         Instances[] splitData = splitData(data, att, threshold);
@@ -476,8 +494,16 @@ public class NewJ48 extends Classifier {
         return splitInfo;
     }
 
-    public double staticErrorEstimate(int N, int n, int k) {
-
+    /**
+     * Computes static error estimate for pruning.
+     *
+     * @param N the number of instances
+     * @param n number of instance in majority class
+     * @param k number of class value
+     * @return the static error estimate
+     * 
+     */
+    private double staticErrorEstimate(int N, int n, int k) {
         double E = (N - n + k - 1) / (double) (N + k);
 
         return E;
@@ -527,7 +553,6 @@ public class NewJ48 extends Classifier {
      * @return index of attribute that has most common value
      */
     private int modusIndex(Instances data, Attribute att) {
-
         // cari modus
         int[] modus = new int[att.numValues()];
         Enumeration dataEnumeration = data.enumerateInstances();
@@ -540,16 +565,13 @@ public class NewJ48 extends Classifier {
         }
 
         // cari modus terbesar
-        int max = 0;
-        int index = -1;
-        for (int i = 0; i < modus.length; ++i) {
-            if (modus[i] > max) {
-                max = modus[i];
-                index = i;
+        int indexMax = 0;
+        for (int i = 1; i < modus.length; ++i) {
+            if (modus[i] > modus[indexMax]) {
+                indexMax = i;
             }
         }
-
-        return index;
+        return indexMax;
     }
 
     /**
@@ -581,11 +603,8 @@ public class NewJ48 extends Classifier {
                 text.append(": null");
             } else {
                 text.append(": ").append(classAttribute.value((int) label));
-
-                double totalInstances = 0;
-                for (int i = 0; i < classDistributions.length; i++) {
-                    totalInstances += classDistributions[i];
-                }
+                
+                double totalInstances = DoubleStream.of(classDistributions).sum();
                 text.append(" (").append(totalInstances);
 
                 double wrongClass = totalInstances - classDistributions[(int) label];
@@ -625,18 +644,6 @@ public class NewJ48 extends Classifier {
     }
 
     /**
-     * Check whether two double values are the same
-     *
-     * @param d1 the first double value
-     * @param d2 the second double value
-     * @return true if the values are the same, false if not
-     */
-    private boolean doubleEqual(double d1, double d2) {
-
-        return (d1 == d2) || Math.abs(d1 - d2) < DOUBLE_ERROR_MAXIMUM;
-    }
-
-    /**
      * Count the logarithm value with base 2 of a number
      *
      * @param num number that will be counted
@@ -667,26 +674,21 @@ public class NewJ48 extends Classifier {
             return -1;
         }
     }
-
     /**
-     * Normalize the values in array of double
+     * Normalize the class distribution
      *
-     * @param array the array of double
+     * @exception Exception if sum of class distribution is 0 or NAN
      */
-    private void normalizeDouble(double[] array) {
-
-        double sum = 0;
-        for (double d : array) {
-            sum += d;
-        }
-
+    private double[] normalize(double[] array) {
+        double sum = DoubleStream.of(array).sum();
+        double[] newArray = new double[array.length];
         if (!Double.isNaN(sum) && sum != 0) {
             for (int i = 0; i < array.length; ++i) {
-                array[i] /= sum;
+                newArray[i] = array[i] / sum;
             }
+            return newArray;
         } else {
-            // Do nothing
+            return array;
         }
     }
-
 }

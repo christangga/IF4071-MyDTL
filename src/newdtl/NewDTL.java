@@ -24,21 +24,25 @@ public class NewDTL {
                     Classifier id3 = Helper.buildClassifier(instances, "id3");
                     System.out.println(id3.toString() + "\n");
                     Helper.classifyUsingModel(id3, dataSourceUnlabeled);
+                    Helper.tenFoldCrossValidation(instances, id3);
                     break;
                 case "newid3":
                     Classifier newId3 = Helper.buildClassifier(instances, "newid3");
                     System.out.println(newId3.toString() + "\n");
                     Helper.classifyUsingModel(newId3, dataSourceUnlabeled);
+                    Helper.tenFoldCrossValidation(instances, newId3);
                     break;
                 case "j48":
                     Classifier j48 = Helper.buildClassifier(instances, "j48");
                     System.out.println(j48.toString() + "\n");
                     Helper.classifyUsingModel(j48, dataSourceUnlabeled);
+                    Helper.tenFoldCrossValidation(instances, j48);
                     break;
                 case "newj48":
                     Classifier newJ48 = Helper.buildClassifier(instances, "newj48");
                     System.out.println(newJ48.toString() + "\n");
                     Helper.classifyUsingModel(newJ48, dataSourceUnlabeled);
+                    Helper.tenFoldCrossValidation(instances, newJ48);
                     break;
                 default:
                     break;
