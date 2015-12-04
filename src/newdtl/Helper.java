@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.bayes.NaiveBayes;
+import weka.classifiers.functions.LibSVM;
 import weka.classifiers.trees.Id3;
 import weka.classifiers.trees.J48;
 import weka.core.Instances;
@@ -134,6 +135,11 @@ public class Helper {
                     newJ48.buildClassifier(data);
 
                     return newJ48;
+                case "svm":
+                    LibSVM libSVM = new LibSVM();
+                    libSVM.buildClassifier(data);
+                    
+                    return libSVM;
             }
         } catch (Exception ex) {
             Logger.getLogger(Helper.class.getName()).log(Level.SEVERE, null, ex);
